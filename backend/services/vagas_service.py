@@ -206,20 +206,22 @@ def _ler_sheets() -> tuple[List[Dict[str, Any]], str]:
     next(reader, None)  # cabeçalho
 
     vagas: List[Dict[str, Any]] = []
-    ultima_inclusao: Optional[datetime] = None
+    ultima_disponibilidade: Optional[datetime] = None
 
     for row in reader:
         if not row or not any((c or "").strip() for c in row):
             continue
-        inclusao = _parse_datetime_iso(row[18] if len(row) > 18 else "")
-        if inclusao and (ultima_inclusao is None or inclusao > ultima_inclusao):
-            ultima_inclusao = inclusao
+        disponibilidade = _parse_datetime_iso(row[19] if len(row) > 19 else "")
+        if disponibilidade and (
+            ultima_disponibilidade is None or disponibilidade > ultima_disponibilidade
+        ):
+            ultima_disponibilidade = disponibilidade
         vaga = _row_para_vaga(row)
         if vaga:
             vagas.append(vaga)
 
     ultima_atualizacao = (
-        _formatar_data_hora_br(ultima_inclusao) if ultima_inclusao else ""
+        _formatar_data_hora_br(ultima_disponibilidade) if ultima_disponibilidade else ""
     )
     return vagas, ultima_atualizacao
 
