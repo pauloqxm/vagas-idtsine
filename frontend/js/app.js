@@ -176,6 +176,13 @@ function preencherSelect(select, valores, textoInicial) {
 function popularFiltrosSuspensos() {
   preencherSelect(els.unidade, unicoOrdenado("unidade"), "Todas");
   preencherSelect(els.municipio, unicoOrdenado("municipio"), "Todos");
+
+  const datalist = document.getElementById("lista-ocupacoes");
+  if (datalist) {
+    datalist.innerHTML = unicoOrdenado("ocupacao")
+      .map((v) => `<option value="${escapeAttr(v)}">`)
+      .join("");
+  }
 }
 
 function aplicarFiltros() {
