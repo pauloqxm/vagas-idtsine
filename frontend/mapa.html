@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Veja as vagas de emprego do IDT no mapa do Ceará." />
+  <title>Mapa de Vagas | IDT</title>
+  <link href="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="map-page">
+  <header class="site-header" id="topo">
+    <div class="site-shortcuts">
+      <div class="container site-shortcuts__inner">
+        <a href="#map-main">Ir para os serviços</a>
+        <a href="#s-footer">Ir para o rodapé</a>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="container topbar__inner">
+        <a class="logo" href="index.html" aria-label="Voltar para a busca de vagas">
+          <img src="https://www.idt.org.br/assets/img/logos/logo_grande.png" alt="IDT" />
+        </a>
+        <p class="site-title" aria-label="Vagas de Emprego">
+          <span class="site-title__text">
+            <span class="site-title__word site-title__word--green">Vagas</span>
+            <span class="site-title__word site-title__word--blue">de</span>
+            <span class="site-title__word site-title__word--orange">Emprego</span>
+          </span>
+          <span class="site-title__accent" aria-hidden="true"></span>
+        </p>
+        <form class="site-search" action="https://www.idt.org.br/" method="get">
+          <input type="search" name="q" placeholder="O que você procura?" aria-label="O que você procura?" />
+          <button type="submit" aria-label="Buscar">🔍</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="site-header-divider" aria-hidden="true"></div>
+  </header>
+
+  <main class="map-main-page">
+    <section class="container map-summary" aria-live="polite">
+      <div>
+        <h2>Mapa das vagas e unidades</h2>
+        <p id="map-status">Carregando mapa...</p>
+        <p id="ultima-atualizacao" class="ultima-atualizacao"></p>
+      </div>
+      <div class="map-legend">
+        <span><strong class="legend-pin"></strong> Unidade IDT</span>
+        <span><strong class="legend-area"></strong> Município</span>
+      </div>
+    </section>
+
+    <section class="container map-filters" aria-label="Filtros do mapa">
+      <label>
+        <span>Unidade</span>
+        <select id="map-filter-unidade">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>
+        <span>Município</span>
+        <select id="map-filter-municipio">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label>
+        <span>Data</span>
+        <select id="map-filter-data">
+          <option value="mais-recente" selected>Data mais recente</option>
+          <option value="qualquer">Qualquer data</option>
+          <option value="hoje">Hoje</option>
+          <option value="2">Últimos dois dias</option>
+          <option value="3">Últimos três dias</option>
+          <option value="7">Última semana</option>
+          <option value="15">Últimos 15 dias</option>
+          <option value="30">Último mês</option>
+        </select>
+      </label>
+      <button id="map-filter-clear" type="button" class="btn btn-light">Limpar filtros</button>
+    </section>
+
+    <section class="container">
+      <div id="mapa-container" class="map-layout public-map-layout">
+        <div id="map-main"></div>
+      </div>
+      <div id="map-results" class="map-results" aria-live="polite">
+        Selecione uma unidade ou município para ver a quantidade de vagas.
+      </div>
+      <section id="map-vagas-table-section" class="map-vagas-table-section hidden" aria-label="Relação de vagas filtradas">
+        <h2>Vagas encontradas</h2>
+        <p id="map-vagas-table-summary"></p>
+        <div class="map-vagas-table-scroll">
+          <table class="map-vagas-table">
+            <thead>
+              <tr>
+                <th scope="col">Ocupação</th>
+                <th scope="col">Quantidade</th>
+                <th scope="col">PCD</th>
+                <th scope="col">Município</th>
+                <th scope="col">Unidade</th>
+                <th scope="col">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="map-vagas-table-body"></tbody>
+          </table>
+        </div>
+        <div id="map-vagas-paginacao" class="pagination hidden" aria-label="Paginação da tabela de vagas"></div>
+      </section>
+    </section>
+  </main>
+
+  <div id="modal-vaga" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal__backdrop"></div>
+    <div class="modal__box">
+      <button type="button" class="modal__close" aria-label="Fechar">×</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer" id="s-footer">
+    <div class="container site-footer__links">
+      <section>
+        <h4>Institucional</h4>
+        <a href="https://www.idt.org.br/institucional/sobre-o-idt" target="_blank" rel="noopener noreferrer">Sobre o IDT</a>
+        <a href="https://www.idt.org.br/institucional/historico" target="_blank" rel="noopener noreferrer">Histórico</a>
+        <a href="https://www.idt.org.br/institucional/parceiros" target="_blank" rel="noopener noreferrer">Parceiros</a>
+        <a href="https://www.idt.org.br/organograma-idt" target="_blank" rel="noopener noreferrer">Organograma</a>
+      </section>
+      <section>
+        <h4>Serviços</h4>
+        <a href="https://www.idt.org.br/saa4" target="_blank" rel="noopener noreferrer">Agende seu atendimento no IDTSine</a>
+        <a href="https://www.idt.org.br/vagas-disponiveis" target="_blank" rel="noopener noreferrer">Consulte vagas disponíveis</a>
+        <a href="https://www.idt.org.br/trabalhador/o-que-e-o-seguro-desemprego" target="_blank" rel="noopener noreferrer">Seguro-Desemprego</a>
+        <a href="https://www.idt.org.br/empregador/oferte-vaga" target="_blank" rel="noopener noreferrer">Empresário - Oferte sua vaga</a>
+      </section>
+    </div>
+    <div id="rodapeIDT" class="site-footer__end">
+      ©1998-2026 Instituto de Desenvolvimento do Trabalho – IDT - Rua Rufino de Alencar nº 134 - Centro, Fortaleza - CE - CEP: 60060-145
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
+  <script src="js/detalhes-vaga.js" defer></script>
+  <script src="js/mapa.js" defer></script>
+</body>
+</html>

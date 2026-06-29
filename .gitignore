@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Dados locais (produção usa Google Sheets)
+*.csv
+
+# IDE / SO
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Encontre vagas de emprego do IDT de forma simples e rápida." />
+  <title>Vagas de Emprego | IDT</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <a class="skip-link" href="#resultados">Ir para as vagas</a>
+
+  <header class="site-header" id="topo">
+    <div class="site-shortcuts">
+      <div class="container site-shortcuts__inner">
+        <a href="#resultados">Ir para os serviços</a>
+        <a href="#s-footer">Ir para o rodapé</a>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="container topbar__inner">
+        <a class="logo" href="https://www.idt.org.br/" aria-label="Ir para o site do IDT">
+          <img src="https://www.idt.org.br/assets/img/logos/logo_grande.png" alt="IDT" />
+        </a>
+        <p class="site-title" aria-label="Vagas de Emprego">
+          <span class="site-title__text">
+            <span class="site-title__word site-title__word--green">Vagas</span>
+            <span class="site-title__word site-title__word--blue">de</span>
+            <span class="site-title__word site-title__word--orange">Emprego</span>
+          </span>
+          <span class="site-title__accent" aria-hidden="true"></span>
+        </p>
+        <form class="site-search" action="https://www.idt.org.br/" method="get">
+          <input type="search" name="q" placeholder="O que você procura?" aria-label="O que você procura?" />
+          <button type="submit" aria-label="Buscar">🔍</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="site-header-divider" aria-hidden="true"></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="hero__text">
+          <p class="eyebrow">Procure sua oportunidade</p>
+          <h2>Digite o nome da vaga e escolha a unidade ou o município.</h2>
+          <p>Se não souber o nome certo, digite uma palavra. Exemplo: auxiliar, vendedor, limpeza.</p>
+        </div>
+
+        <form id="busca-form" class="search-box" aria-label="Busca de vagas">
+          <h3>Busca de vagas</h3>
+          <div class="search-row">
+            <label class="search-field">
+              <span class="sr-only">Cargo ou palavra-chave</span>
+              <span aria-hidden="true" class="field-icon">Buscar</span>
+              <input id="busca-cargo" type="search" placeholder="Cargo ou palavra-chave" autocomplete="off" />
+            </label>
+            <label class="search-field">
+              <span class="sr-only">Unidade</span>
+              <span aria-hidden="true" class="field-icon">Unidade</span>
+              <select id="filtro-unidade">
+                <option value="">Todas</option>
+              </select>
+            </label>
+            <label class="search-field">
+              <span class="sr-only">Município</span>
+              <span aria-hidden="true" class="field-icon">Município</span>
+              <select id="filtro-municipio">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <label class="search-field">
+              <span class="sr-only">Data</span>
+              <span aria-hidden="true" class="field-icon">Data</span>
+              <select id="filtro-data">
+                <option value="mais-recente" selected>Data mais recente</option>
+                <option value="qualquer">Qualquer data</option>
+                <option value="hoje">Hoje</option>
+                <option value="2">Últimos dois dias</option>
+                <option value="3">Últimos três dias</option>
+                <option value="7">Última semana</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30">Último mês</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="search-actions-row" aria-label="Filtros e ações">
+            <label class="search-actions-row__pcd">
+              <input type="checkbox" id="filtro-pcd" />
+              Mostrar vagas para PCD
+            </label>
+            <div class="search-actions-row__buttons">
+              <button type="submit" class="btn btn-primary">Procurar vagas</button>
+              <a class="btn btn-map" href="mapa.html">Ver no mapa</a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="container popular-section" aria-labelledby="populares-titulo">
+      <div class="popular-card">
+        <div class="popular-heading">
+          <span class="popular-icon" aria-hidden="true">↗</span>
+          <h3 id="populares-titulo">Buscas mais populares</h3>
+        </div>
+        <div class="popular-tabs" role="tablist" aria-label="Tipo de busca popular">
+          <button id="tab-popular-vagas" type="button" class="popular-tab active" data-popular-tab="vagas" role="tab" aria-selected="true">
+            Vagas
+          </button>
+          <button id="tab-popular-cidades" type="button" class="popular-tab" data-popular-tab="cidades" role="tab" aria-selected="false">
+            Cidades
+          </button>
+          <button id="tab-popular-unidades" type="button" class="popular-tab" data-popular-tab="unidades" role="tab" aria-selected="false">
+            Unidades
+          </button>
+        </div>
+        <div id="popular-list" class="popular-list" aria-live="polite">
+          <span>Carregando buscas populares...</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container status-area" aria-live="polite">
+      <div class="status-area__text">
+        <p id="status-text">Carregando vagas...</p>
+        <p id="ultima-atualizacao" class="ultima-atualizacao"></p>
+      </div>
+      <button id="btn-limpar" type="button" class="btn btn-light hidden">Limpar busca</button>
+    </section>
+
+    <section class="container kpi-section" aria-label="Indicadores das vagas filtradas">
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-card--pcd">
+          <span class="kpi-label">Total de vagas PCD</span>
+          <span class="kpi-value" id="kpi-vagas-pcd">0</span>
+        </div>
+        <div class="kpi-card kpi-card--npcd">
+          <span class="kpi-label">Total de vagas sem PCD</span>
+          <span class="kpi-value" id="kpi-vagas-nao-pcd">0</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Total geral das vagas</span>
+          <span class="kpi-value" id="kpi-total-vagas">0</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultados" class="container results-layout">
+      <aside class="help-card" aria-label="Ajuda para procurar vagas">
+        <h3>Como procurar?</h3>
+        <ol>
+          <li>Digite o cargo que você quer.</li>
+          <li>Escolha a unidade ou o município, se quiser.</li>
+          <li>Clique em procurar vagas.</li>
+          <li>Abra uma vaga e ligue para a unidade.</li>
+        </ol>
+        <p class="help-note">Dica: use palavras simples, como motorista, cozinheiro ou atendente.</p>
+      </aside>
+
+      <div>
+        <div id="lista-vagas" class="cards" aria-label="Lista de vagas"></div>
+        <div id="paginacao" class="pagination hidden"></div>
+      </div>
+    </section>
+
+    <section class="container faq-section" aria-labelledby="faq-titulo">
+      <div class="faq-card">
+        <div class="faq-layout">
+          <div class="faq-title-box">
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2.5" opacity="0.35"/>
+                <path d="M22 26c0-5.5 4.5-10 10-10s10 4.5 10 10c0 4-2.5 6.5-5.5 8.2-.9.5-1.5 1.4-1.5 2.5v1.3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="32" cy="44" r="2.5" fill="currentColor"/>
+                <path d="M18 18l6 6M46 18l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+              </svg>
+            </span>
+            <h2 id="faq-titulo">Perguntas Frequentes</h2>
+          </div>
+          <div class="faq-accordion">
+          <details class="faq-item">
+            <summary>Como funciona o agendamento de atendimento?</summary>
+            <div class="faq-answer">
+              <p>Para maior conforto e segurança, recomenda-se agendar previamente o atendimento pelo portal <a href="https://www.idt.org.br/" target="_blank" rel="noopener noreferrer">www.idt.org.br</a>. Caso não haja agendamento, o atendimento ficará sujeito a encaixe, conforme a disponibilidade do momento.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Como agendar atendimento nas unidades dos Vapt Vupts?</summary>
+            <div class="faq-answer">
+              <p>Os usuários do sistema IDT/SINE que optarem pelas unidades instaladas nos Vapt Vupts devem realizar o agendamento por meio do link <a href="https://www.sps.ce.gov.br/sistemas/vapt-vupt/" target="_blank" rel="noopener noreferrer">https://www.sps.ce.gov.br/sistemas/vapt-vupt/</a></p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Com que frequência a lista de vagas é atualizada?</summary>
+            <div class="faq-answer">
+              <p>A relação de vagas é atualizada duas vezes ao dia, às 11h30 e às 16h30, podendo sofrer alterações.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Como saber se uma vaga é compatível com o meu perfil profissional?</summary>
+            <div class="faq-answer">
+              <p>Basta acessar o site do Governo Federal (<a href="https://empregabrasil.mte.gov.br" target="_blank" rel="noopener noreferrer">empregabrasil.mte.gov.br</a>) para verificar se a função desejada está de acordo com o seu perfil.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Como enviar meu currículo para uma vaga de interesse?</summary>
+            <div class="faq-answer">
+              <p>Envie seu currículo para o e-mail da Unidade de Atendimento correspondente, colocando o nome da vaga no assunto da mensagem.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Como entrar em contato em caso de dúvidas?</summary>
+            <div class="faq-answer">
+              <p>Você pode ligar para a Central de Atendimento ao Cliente no número <a href="tel:8532220340">(85) 3222.0340</a> ou entrar em contato com uma das unidades de atendimento.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>Onde encontro o telefone das unidades de atendimento?</summary>
+            <div class="faq-answer">
+              <p>No portal, clique na opção <a href="https://www.idt.org.br/onde-estamos/todas" target="_blank" rel="noopener noreferrer">onde estamos</a> para acessar os números de cada unidade.</p>
+            </div>
+          </details>
+        </div>
+      </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal-vaga" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal__backdrop"></div>
+    <div class="modal__box">
+      <button type="button" class="modal__close" aria-label="Fechar">×</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer" id="s-footer">
+    <div class="container site-footer__links">
+      <section>
+        <h4>Institucional</h4>
+        <a href="https://www.idt.org.br/institucional/sobre-o-idt" target="_blank" rel="noopener noreferrer">Sobre o IDT</a>
+        <a href="https://www.idt.org.br/institucional/historico" target="_blank" rel="noopener noreferrer">Histórico</a>
+        <a href="https://www.idt.org.br/institucional/parceiros" target="_blank" rel="noopener noreferrer">Parceiros</a>
+        <a href="https://www.idt.org.br/organograma-idt" target="_blank" rel="noopener noreferrer">Organograma</a>
+      </section>
+      <section>
+        <h4>Serviços</h4>
+        <a href="https://www.idt.org.br/saa4" target="_blank" rel="noopener noreferrer">Agende seu atendimento no IDTSine</a>
+        <a href="https://www.idt.org.br/vagas-disponiveis" target="_blank" rel="noopener noreferrer">Consulte vagas disponíveis</a>
+        <a href="https://www.idt.org.br/trabalhador/o-que-e-o-seguro-desemprego" target="_blank" rel="noopener noreferrer">Seguro-Desemprego</a>
+        <a href="https://www.idt.org.br/empregador/oferte-vaga" target="_blank" rel="noopener noreferrer">Empresário - Oferte sua vaga</a>
+      </section>
+    </div>
+    <div id="rodapeIDT" class="site-footer__end">
+      ©1998-2026 Instituto de Desenvolvimento do Trabalho – IDT - Rua Rufino de Alencar nº 134 - Centro, Fortaleza - CE - CEP: 60060-145
+    </div>
+  </footer>
+
+  <script src="js/detalhes-vaga.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
