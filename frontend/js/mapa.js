@@ -99,10 +99,14 @@ function diffDias(a, b) {
 function calcularDataMaisRecente() {
   const features = vagasGeojson && vagasGeojson.features ? vagasGeojson.features : [];
   const datas = features
-    .map((feature) => parseDataBR((feature.properties || {}).data))
+    .map((feature) => parseDataBR(dataFiltro(feature.properties || {})))
     .filter(Boolean);
   if (datas.length === 0) return null;
   return datas.reduce((maior, data) => (data > maior ? data : maior), datas[0]);
+}
+
+function dataFiltro(props) {
+  return String(props.data_disponibilidade || props.data || "").trim();
 }
 
 function dataDentroPeriodo(dataTexto, periodo) {
@@ -129,7 +133,7 @@ function vagasFiltradas() {
     ) {
       return false;
     }
-    if (!dataDentroPeriodo(props.data, filtros.dataPeriodo)) return false;
+    if (!dataDentroPeriodo(dataFiltro(props), filtros.dataPeriodo)) return false;
     return true;
   });
 }

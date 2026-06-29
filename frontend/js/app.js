@@ -73,9 +73,13 @@ function diffDias(a, b) {
 }
 
 function calcularDataMaisRecente() {
-  const datas = state.vagas.map((vaga) => parseDataBR(vaga.data)).filter(Boolean);
+  const datas = state.vagas.map((vaga) => parseDataBR(dataFiltro(vaga))).filter(Boolean);
   if (datas.length === 0) return null;
   return datas.reduce((maior, data) => (data > maior ? data : maior), datas[0]);
+}
+
+function dataFiltro(vaga) {
+  return String(vaga.data_disponibilidade || vaga.data || "").trim();
 }
 
 function dataDentroPeriodo(dataTexto, periodo) {
@@ -192,7 +196,7 @@ function aplicarFiltros() {
     if (cargo && !contem(vaga.ocupacao, cargo)) return false;
     if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
     if (municipio && normalizar(vaga.municipio) !== normalizar(municipio)) return false;
-    if (!dataDentroPeriodo(vaga.data, dataPeriodo)) return false;
+    if (!dataDentroPeriodo(dataFiltro(vaga), dataPeriodo)) return false;
     if (pcd && !vaga.pcd) return false;
     return true;
   });

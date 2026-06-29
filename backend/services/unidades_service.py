@@ -16,10 +16,14 @@ def _parse_data_br(s: str) -> Optional[date]:
         return None
 
 
+def _data_listagem(v: Dict[str, Any]) -> str:
+    return str(v.get("data_disponibilidade") or v.get("data") or "").strip()
+
+
 def _data_mais_recente_vagas(vagas: List[Dict[str, Any]]) -> Optional[date]:
     best: Optional[date] = None
     for v in vagas:
-        d = _parse_data_br(v.get("data") or "")
+        d = _parse_data_br(_data_listagem(v))
         if d and (best is None or d > best):
             best = d
     return best
@@ -41,7 +45,7 @@ def _recentes_por_posto(
         return {}
     tot: Dict[str, int] = defaultdict(int)
     for v in vagas:
-        if _parse_data_br(v.get("data") or "") != data_ref:
+        if _parse_data_br(_data_listagem(v)) != data_ref:
             continue
         posto = str(v.get("posto_atendimento") or "").strip()
         if posto:
