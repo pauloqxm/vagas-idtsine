@@ -211,11 +211,26 @@ input {
   );
 }
 
+.topbar__logos {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
 .logo img {
-  width: 150px;
-  max-width: 38vw;
   height: auto;
   display: block;
+}
+
+.logo--idt img {
+  width: 150px;
+  max-width: 38vw;
+}
+
+.logo--gov img {
+  height: 56px;
+  width: auto;
+  max-width: min(90px, 22vw);
 }
 
 .eyebrow {
@@ -1508,7 +1523,7 @@ h1 {
     gap: 0.75rem;
   }
 
-  .logo {
+  .topbar__logos {
     grid-column: 1;
     grid-row: 1;
   }
@@ -1546,8 +1561,13 @@ h1 {
     padding: 0.75rem 0;
   }
 
-  .logo img {
+  .logo--idt img {
     width: 112px;
+  }
+
+  .logo--gov img {
+    height: 44px;
+    max-width: 72px;
   }
 
   .site-search {
