@@ -46,6 +46,7 @@ let dataMaisRecente = null;
 const filtros = {
   unidade: "",
   municipio: "",
+  posto: "",
   dataPeriodo: "mais-recente",
 };
 const TABELA_POR_PAGINA = 12;
@@ -75,6 +76,10 @@ function municipioDaFeature(props) {
     if (props && props[key]) return String(props[key]).trim();
   }
   return "";
+}
+
+function codigoPosto(props) {
+  return String((props && (props.posto_atendimento || props.codigo)) || "").trim();
 }
 
 function qtdeFeature(feature) {
@@ -124,6 +129,9 @@ function vagasFiltradas() {
   const features = vagasGeojson && vagasGeojson.features ? vagasGeojson.features : [];
   return features.filter((feature) => {
     const props = feature.properties || {};
+    if (filtros.posto && codigoPosto(props) !== filtros.posto) {
+      return false;
+    }
     if (filtros.unidade && normalizar(props.unidade) !== normalizar(filtros.unidade)) {
       return false;
     }
@@ -249,25 +257,14 @@ function popularFiltros() {
 
 function aplicarFiltroUnidadesNoMapa() {
   if (!map || !map.getSource(UNIDADES_SOURCE) || !unidadesGeojson) return;
-  const unidadesComVagas = new Set(
+  const postosComVagas = new Set(
     vagasFiltradas()
-      .map((feature) => String((feature.properties || {}).unidade || "").trim())
+      .map((feature) => codigoPosto(feature.properties))
       .filter(Boolean)
-      .map(normalizar)
   );
   const features = unidadesGeojson.features.filter((feature) => {
-    const props = feature.properties || {};
-    if (filtros.unidade && normalizar(props.unidade) !== normalizar(filtros.unidade)) {
-      return false;
-    }
-    if (
-      filtros.municipio &&
-      normalizar(props.municipio) !== normalizar(filtros.municipio)
-    ) {
-      return false;
-    }
-    if (!unidadesComVagas.has(normalizar(props.unidade))) return false;
-    return true;
+    const codigo = codigoPosto(feature.properties);
+    return codigo && postosComVagas.has(codigo);
   });
   map.getSource(UNIDADES_SOURCE).setData({
     type: "FeatureCollection",
@@ -288,7 +285,7 @@ function atualizarResumo() {
     0
   );
   const unidades = new Set(
-    vagas.map((feature) => String((feature.properties || {}).unidade || "").trim()).filter(Boolean)
+    vagas.map((feature) => codigoPosto(feature.properties)).filter(Boolean)
   );
   const titulo =
     filtros.unidade || filtros.municipio
@@ -441,13 +438,25 @@ function aplicarFiltrosMapa() {
 
 function selecionarMunicipio(municipio) {
   filtros.municipio = municipio || "";
+  filtros.posto = "";
   const select = document.getElementById("map-filter-municipio");
   if (select) select.value = filtros.municipio;
   aplicarFiltrosMapa();
 }
 
-function selecionarUnidade(unidade) {
-  filtros.unidade = unidade || "";
+function selecionarUnidade(unidade, codigo = "") {
+  filtros.posto = codigo || "";
+  if (codigo && vagasGeojson) {
+    const vaga = vagasGeojson.features.find(
+      (feature) => codigoPosto(feature.properties) === codigo
+    );
+    filtros.unidade = vaga
+      ? String((vaga.properties && vaga.properties.unidade) || "").trim()
+      : unidade || "";
+  } else {
+    filtros.unidade = unidade || "";
+    filtros.posto = "";
+  }
   const select = document.getElementById("map-filter-unidade");
   if (select) select.value = filtros.unidade;
   aplicarFiltrosMapa();
@@ -456,6 +465,7 @@ function selecionarUnidade(unidade) {
 function limparSelecaoMapa() {
   filtros.unidade = "";
   filtros.municipio = "";
+  filtros.posto = "";
   const unidade = document.getElementById("map-filter-unidade");
   const municipio = document.getElementById("map-filter-municipio");
   if (unidade) unidade.value = "";
@@ -576,7 +586,10 @@ async function adicionarUnidades() {
   map.on("click", UNIDADES_LAYER, (event) => {
     const feature = event.features && event.features[0];
     if (!feature) return;
-    selecionarUnidade((feature.properties && feature.properties.unidade) || "");
+    selecionarUnidade(
+      (feature.properties && feature.properties.unidade) || "",
+      codigoPosto(feature.properties)
+    );
     popup
       .setLngLat(feature.geometry.coordinates)
       .setHTML(buildUnidadePopupHtml(feature.properties, feature.geometry.coordinates))
@@ -631,6 +644,7 @@ function focarVagaDaUrl() {
   if (!feature) return false;
   filtros.unidade = String((feature.properties && feature.properties.unidade) || "");
   filtros.municipio = String((feature.properties && feature.properties.municipio) || "");
+  filtros.posto = codigoPosto(feature.properties);
   const unidadeSelect = document.getElementById("map-filter-unidade");
   const municipioSelect = document.getElementById("map-filter-municipio");
   if (unidadeSelect) unidadeSelect.value = filtros.unidade;
@@ -653,6 +667,7 @@ function configurarFiltros() {
   if (unidade) {
     unidade.addEventListener("change", () => {
       filtros.unidade = unidade.value;
+      filtros.posto = "";
       aplicarFiltrosMapa();
     });
   }
@@ -660,6 +675,7 @@ function configurarFiltros() {
   if (municipio) {
     municipio.addEventListener("change", () => {
       filtros.municipio = municipio.value;
+      filtros.posto = "";
       aplicarFiltrosMapa();
     });
   }
