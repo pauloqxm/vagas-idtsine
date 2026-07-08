@@ -80,8 +80,8 @@ def _parse_datetime_iso(val: str) -> Optional[datetime]:
         return None
 
 
-def _formatar_data_hora_br(dt: datetime) -> str:
-    return dt.strftime("%d/%m/%Y %H:%M")
+def _formatar_data_br(dt: datetime) -> str:
+    return dt.strftime("%d/%m/%Y")
 
 
 def _email_da_coluna_tipo(tipo_raw: str) -> str:
@@ -221,7 +221,7 @@ def _ler_sheets() -> tuple[List[Dict[str, Any]], str]:
             vagas.append(vaga)
 
     ultima_atualizacao = (
-        _formatar_data_hora_br(ultima_disponibilidade) if ultima_disponibilidade else ""
+        _formatar_data_br(ultima_disponibilidade) if ultima_disponibilidade else ""
     )
     return vagas, ultima_atualizacao
 

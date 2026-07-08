@@ -1,37 +1,46 @@
-# Página pública de vagas
+# Portal público de vagas — IDT
 
-Versão simples do portal para consulta de vagas pelo cidadão.
+Consulta de vagas de emprego com busca, filtros, mapa do Ceará e detalhes das unidades.
 
-## Executar
-
-Abra o arquivo:
+## Executar localmente
 
 ```bat
 run.bat
 ```
 
-Por padrão, o servidor abre em:
+Abre em: http://127.0.0.1:8020/
 
-```text
-http://127.0.0.1:8020/
-```
-
-Para usar outra porta:
+Outra porta:
 
 ```bat
 set PORT=8030
 run.bat
 ```
 
+## Páginas
+
+| URL | Descrição |
+|-----|-----------|
+| `/` | Busca de vagas, KPIs, FAQ |
+| `/mapa.html` | Mapa com unidades e tabela de vagas |
+
 ## Dados
 
-A página usa os arquivos locais:
+As vagas e unidades vêm de **planilhas publicadas no Google Sheets** (sem CSV local em produção).
 
-- `lista_vagas.csv`
-- `unidades_coordenadas.csv`
+- URLs configuradas em `backend/services/vagas_service.py`
+- Cache: vagas 5 min, unidades 1 h
+- Forçar atualização: `GET /api/vagas/refresh`
 
-Depois de trocar os CSVs, reinicie o servidor ou acesse:
+## Deploy
 
-```text
-http://127.0.0.1:8020/api/vagas/refresh
+Ver `DEPLOY.md`. Repositório: https://github.com/pauloqxm/vagas-idtsine
+
+```bash
+docker build -t portal-vagas .
+docker run -p 8020:8020 -e PORT=8020 portal-vagas
 ```
+
+## Contexto completo
+
+Documentação para o Cursor/assistente: `../CONTEXT_VAGAS_EMPREGO.md`

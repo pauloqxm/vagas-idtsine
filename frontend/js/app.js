@@ -411,7 +411,7 @@ function renderCard(vaga) {
       </div>
       <div class="tag-row">
         ${pcd}
-        ${vaga.data ? `<span class="tag">Publicada em ${escapeHtml(vaga.data)}</span>` : ""}
+        ${vaga.data_disponibilidade ? `<span class="tag">Publicada em ${escapeHtml(vaga.data_disponibilidade)}</span>` : ""}
         <span class="tag tag-dias">Dias ofertadas: ${diasOfertadas(vaga)}</span>
       </div>
       <div class="vaga-actions">

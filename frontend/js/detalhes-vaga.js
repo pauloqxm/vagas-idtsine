@@ -116,7 +116,7 @@ const DetalhesVaga = {
         <div><strong>Cidade:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
         ${dados.endereco ? `<div><strong>Endereço:</strong> ${this.escapeHtml(dados.endereco)}</div>` : ""}
-        ${dados.data ? `<div><strong>Data:</strong> ${this.escapeHtml(dados.data)}</div>` : ""}
+        ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(dados.data_disponibilidade)}</div>` : ""}
         <div><strong>Dias ofertadas:</strong> ${this.diasOfertadas(dados)}</div>
         ${dados.pcd === true || dados.pcd === "true" ? "<div><strong>Perfil:</strong> vaga para PCD</div>" : ""}
         ${
