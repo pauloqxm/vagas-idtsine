@@ -577,13 +577,22 @@ const SalvarVagas = {
     return this._html2pdfPromise;
   },
 
+  ehMobile() {
+    return (
+      window.matchMedia("(max-width: 900px)").matches ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "")
+    );
+  },
+
   async gerarPdfBlob(html, nomeArquivo) {
     await this.carregarHtml2Pdf();
 
     const doc = new DOMParser().parseFromString(html, "text/html");
     const cssOriginal = doc.querySelector("style")?.textContent || "";
+    const mobile = this.ehMobile();
+    const scale = mobile ? 1.1 : 1.5;
+    const cardsPorPagina = mobile ? 6 : 12;
 
-    // Escopa os estilos no host para não afetar a página e garantir render no PDF
     const cssEscopado = cssOriginal
       .replace(/@page\s*\{[\s\S]*?\}/g, "")
       .replace(/(^|})\s*([^{}@/][^{]*)\{/g, (match, pre, seletor) => {
@@ -610,7 +619,7 @@ const SalvarVagas = {
         box-sizing: border-box;
         width: 794px;
         max-width: 794px;
-        padding: 8px;
+        padding: 0;
         margin: 0;
         background: #ffffff !important;
         color: #1f2a37;
@@ -620,6 +629,20 @@ const SalvarVagas = {
         box-sizing: border-box;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+      }
+      #pdf-export-host .pdf-page-chunk {
+        width: 794px;
+        padding: 8px;
+        background: #fff;
+      }
+      #pdf-export-host .pdf-page-continue {
+        margin: 0 0 10px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #eaf3f8;
+        color: #003d68;
+        font-size: 11px;
+        font-weight: 800;
       }
       ${cssEscopado}
     `;
@@ -636,19 +659,61 @@ const SalvarVagas = {
     const host = document.createElement("div");
     host.id = "pdf-export-host";
     host.setAttribute("aria-hidden", "true");
-    // Precisa estar visível (opacity 1) e na viewport — html2canvas falha com opacity:0 / offscreen
     host.style.cssText =
       "position:fixed;left:0;top:0;width:794px;background:#ffffff;opacity:1;visibility:visible;pointer-events:none;z-index:2147483645;";
 
     const page = doc.querySelector(".print-page");
-    if (page) host.appendChild(page.cloneNode(true));
-    else host.appendChild(doc.body.cloneNode(true));
-
-    host.querySelectorAll("img").forEach((img) => {
-      // Mantém apenas logos embutidos (data:) para evitar canvas tainted por CORS.
+    const fonte = page ? page.cloneNode(true) : doc.body.cloneNode(true);
+    fonte.querySelectorAll("img").forEach((img) => {
       const src = String(img.getAttribute("src") || "");
       if (!src.startsWith("data:image")) img.remove();
     });
+
+    const header = fonte.querySelector(".print-header");
+    const summary = fonte.querySelector(".print-summary");
+    const footer = fonte.querySelector(".print-footer");
+    const grid = fonte.querySelector(".print-grid");
+    const cards = grid ? [...grid.children] : [];
+
+    const montarChunk = (inicio, fim, primeira) => {
+      const chunk = document.createElement("div");
+      chunk.className = "pdf-page-chunk";
+      if (primeira) {
+        if (header) chunk.appendChild(header.cloneNode(true));
+        if (summary) chunk.appendChild(summary.cloneNode(true));
+      } else {
+        const cont = document.createElement("p");
+        cont.className = "pdf-page-continue";
+        cont.textContent = "Vagas de Emprego — continuação";
+        chunk.appendChild(cont);
+      }
+
+      if (cards.length) {
+        const g = document.createElement("div");
+        g.className = "print-grid";
+        cards.slice(inicio, fim).forEach((card) => g.appendChild(card.cloneNode(true)));
+        chunk.appendChild(g);
+      } else if (primeira) {
+        const empty = fonte.querySelector(".print-empty");
+        if (empty) chunk.appendChild(empty.cloneNode(true));
+      }
+
+      if (fim >= cards.length && footer) {
+        chunk.appendChild(footer.cloneNode(true));
+      }
+      return chunk;
+    };
+
+    const chunks = [];
+    if (!cards.length) {
+      chunks.push(montarChunk(0, 0, true));
+    } else {
+      for (let i = 0; i < cards.length; i += cardsPorPagina) {
+        chunks.push(montarChunk(i, Math.min(i + cardsPorPagina, cards.length), i === 0));
+      }
+    }
+
+    chunks.forEach((chunk) => host.appendChild(chunk));
     document.body.appendChild(host);
     document.body.appendChild(overlay);
 
@@ -666,7 +731,7 @@ const SalvarVagas = {
       )
     );
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 120));
 
     if (!String(host.textContent || "").trim()) {
       overlay.remove();
@@ -675,30 +740,39 @@ const SalvarVagas = {
       throw new Error("Conteúdo do PDF está vazio.");
     }
 
-    try {
-      const blob = await window
-        .html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename: nomeArquivo,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: {
-            scale: 1.5,
-            useCORS: false,
-            allowTaint: false,
-            logging: false,
-            backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: 794,
-            windowHeight: Math.max(host.scrollHeight, 1123),
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        })
-        .from(host)
-        .outputPdf("blob");
+    const opcoes = {
+      margin: [10, 10, 10, 10],
+      filename: nomeArquivo,
+      image: { type: "jpeg", quality: mobile ? 0.92 : 0.98 },
+      html2canvas: {
+        scale,
+        useCORS: false,
+        allowTaint: false,
+        logging: false,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 794,
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"] },
+    };
 
+    try {
+      let worker = window.html2pdf().set(opcoes).from(chunks[0]).toPdf();
+      for (let i = 1; i < chunks.length; i += 1) {
+        worker = worker
+          .get("pdf")
+          .then((pdf) => {
+            pdf.addPage();
+          })
+          .from(chunks[i])
+          .toContainer()
+          .toCanvas()
+          .toPdf();
+      }
+
+      const blob = await worker.outputPdf("blob");
       if (!(blob instanceof Blob) || blob.size < 1500) {
         throw new Error("PDF gerado está vazio ou inválido.");
       }
