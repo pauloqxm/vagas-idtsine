@@ -703,6 +703,139 @@ h1 {
   gap: 0.85rem;
 }
 
+.results-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.85rem;
+}
+
+.view-toggle {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.28rem;
+  background: #f4f7fb;
+  border: 1px solid #dbe4ef;
+  border-radius: 999px;
+}
+
+.view-toggle__btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-toggle__btn:hover,
+.view-toggle__btn:focus-visible {
+  background: #ffffff;
+  color: var(--idt-blue);
+  border-color: #d6e1ed;
+  outline: none;
+}
+
+.view-toggle__btn.is-active {
+  background: var(--idt-blue);
+  color: #fff;
+  border-color: var(--idt-blue);
+}
+
+.vagas-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.vagas-table-scroll {
+  overflow-x: auto;
+}
+
+.vagas-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+
+.vagas-table th,
+.vagas-table td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid #e5eee9;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.vagas-table th {
+  background: var(--idt-green-soft);
+  color: var(--idt-green-hover);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.vagas-table tbody tr:nth-child(even) {
+  background: #f7fbf8;
+}
+
+.vagas-table tbody tr:hover {
+  background: #eef7f2;
+}
+
+.vagas-table-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--idt-blue);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.vagas-table-link:hover,
+.vagas-table-link:focus-visible {
+  color: var(--idt-green-hover);
+  outline: none;
+}
+
+.vagas-pcd {
+  display: inline-flex;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--idt-green-soft);
+  color: var(--idt-green-hover);
+  font-weight: 900;
+}
+
+.vagas-pcd.is-pcd {
+  background: var(--idt-orange-soft);
+  color: var(--idt-orange-hover);
+}
+
+.vagas-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.btn-primary.btn-sm {
+  min-height: 36px;
+}
+
 .vaga-card {
   padding: 1rem;
 }
@@ -1611,6 +1744,18 @@ h1 {
   .status-area {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .results-toolbar {
+    justify-content: stretch;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .view-toggle__btn {
+    flex: 1;
   }
 
   .vaga-card__top {

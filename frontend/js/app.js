@@ -4,6 +4,7 @@ const state = {
   popularesTipo: "vagas",
   pagina: 1,
   porPagina: 12,
+  viewMode: "cards",
   filtros: {
     cargo: "",
     unidade: "",
@@ -37,6 +38,7 @@ function cacheEls() {
   els.kpiPcd = document.getElementById("kpi-vagas-pcd");
   els.kpiNaoPcd = document.getElementById("kpi-vagas-nao-pcd");
   els.ultimaAtualizacao = document.getElementById("ultima-atualizacao");
+  els.viewButtons = document.querySelectorAll("[data-view]");
 }
 
 function normalizar(txt) {
@@ -363,7 +365,11 @@ function aplicarBuscaPopular(valor) {
 }
 
 function renderLista() {
+  atualizarBotoesVisualizacao();
+
   if (state.filtradas.length === 0) {
+    els.lista.className = "cards";
+    els.lista.setAttribute("aria-label", "Lista de vagas");
     els.lista.innerHTML = `
       <div class="empty-card">
         <h3>Não encontramos vagas com essa busca.</h3>
@@ -375,13 +381,57 @@ function renderLista() {
 
   const inicio = (state.pagina - 1) * state.porPagina;
   const pagina = state.filtradas.slice(inicio, inicio + state.porPagina);
-  els.lista.innerHTML = pagina.map(renderCard).join("");
+
+  if (state.viewMode === "table") {
+    els.lista.className = "vagas-table-wrap";
+    els.lista.setAttribute("aria-label", "Tabela de vagas");
+    els.lista.innerHTML = `
+      <div class="vagas-table-scroll">
+        <table class="vagas-table">
+          <thead>
+            <tr>
+              <th scope="col">Ocupação</th>
+              <th scope="col">Qtde</th>
+              <th scope="col">Cidade</th>
+              <th scope="col">Unidade</th>
+              <th scope="col">Publicada</th>
+              <th scope="col">Dias ofertadas</th>
+              <th scope="col">PCD</th>
+              <th scope="col">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pagina.map(renderLinhaTabela).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else {
+    els.lista.className = "cards";
+    els.lista.setAttribute("aria-label", "Lista de vagas");
+    els.lista.innerHTML = pagina.map(renderCard).join("");
+  }
 
   els.lista.querySelectorAll("[data-open-vaga]").forEach((btn) => {
     btn.addEventListener("click", () =>
       abrirDetalhes(btn.dataset.openVaga, btn.dataset.postoAtendimento || "")
     );
   });
+}
+
+function atualizarBotoesVisualizacao() {
+  els.viewButtons.forEach((btn) => {
+    const ativo = btn.dataset.view === state.viewMode;
+    btn.classList.toggle("is-active", ativo);
+    btn.setAttribute("aria-pressed", ativo ? "true" : "false");
+  });
+}
+
+function definirVisualizacao(modo) {
+  if (modo !== "cards" && modo !== "table") return;
+  if (state.viewMode === modo) return;
+  state.viewMode = modo;
+  renderLista();
 }
 
 function diasOfertadas(vaga) {
@@ -420,6 +470,38 @@ function renderCard(vaga) {
         ${contatoHtml}
       </div>
     </article>
+  `;
+}
+
+function renderLinhaTabela(vaga) {
+  const contato = contatoPrincipal(vaga);
+  const contatoHtml = contato
+    ? `<a class="btn btn-call btn-sm" href="${escapeAttr(contato.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contato.acao)}</a>`
+    : "";
+  const mapaHref = `mapa.html?vaga=${encodeURIComponent(vaga.id)}`;
+  const pcd = vaga.pcd === true || vaga.pcd === "true";
+
+  return `
+    <tr>
+      <td>
+        <button type="button" class="vagas-table-link" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}" title="Ver detalhes da vaga">
+          ${escapeHtml(vaga.ocupacao || "Vaga sem nome")}
+        </button>
+      </td>
+      <td>${qtde(vaga)}</td>
+      <td>${escapeHtml(vaga.municipio || "Não informado")}</td>
+      <td>${escapeHtml(vaga.unidade || "Não informado")}</td>
+      <td>${escapeHtml(vaga.data_disponibilidade || "—")}</td>
+      <td>${diasOfertadas(vaga)}</td>
+      <td><span class="vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+      <td>
+        <div class="vagas-table-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
+          <a class="btn btn-map btn-sm" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
+          ${contatoHtml}
+        </div>
+      </td>
+    </tr>
   `;
 }
 
@@ -537,6 +619,12 @@ function bindEvents() {
   els.popularTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       ativarAbaPopular(tab.dataset.popularTab || "vagas");
+    });
+  });
+
+  els.viewButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      definirVisualizacao(btn.dataset.view || "cards");
     });
   });
 
