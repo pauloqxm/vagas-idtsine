@@ -716,7 +716,7 @@ h1 {
   min-height: 40px;
   padding: 0.45rem 1.05rem;
   border-radius: 999px;
-  background: var(--idt-blue);
+  background: var(--idt-orange);
   color: #fff;
   font-size: 0.88rem;
   font-weight: 900;
@@ -724,7 +724,7 @@ h1 {
 
 .btn-compartilhar:hover,
 .btn-compartilhar:focus-visible {
-  background: #00578c;
+  background: var(--idt-orange-hover);
   outline: none;
 }
 

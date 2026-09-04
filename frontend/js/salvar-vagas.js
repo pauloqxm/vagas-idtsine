@@ -504,7 +504,90 @@ const SalvarVagas = {
     }
   },
 
-  prepararPacote({ municipio, vagas }) {
+  carregarHtml2Pdf() {
+    if (typeof window.html2pdf === "function") return Promise.resolve();
+    if (this._html2pdfPromise) return this._html2pdfPromise;
+
+    this._html2pdfPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+      script.async = true;
+      script.onload = () => {
+        if (typeof window.html2pdf === "function") resolve();
+        else reject(new Error("Biblioteca html2pdf indisponível."));
+      };
+      script.onerror = () => reject(new Error("Não foi possível carregar a biblioteca de PDF."));
+      document.head.appendChild(script);
+    }).catch((error) => {
+      this._html2pdfPromise = null;
+      throw error;
+    });
+
+    return this._html2pdfPromise;
+  },
+
+  async aguardarImagens(raiz) {
+    const imagens = [...raiz.querySelectorAll("img")];
+    await Promise.all(
+      imagens.map(
+        (img) =>
+          new Promise((resolve) => {
+            if (img.complete) {
+              resolve();
+              return;
+            }
+            img.addEventListener("load", resolve, { once: true });
+            img.addEventListener("error", resolve, { once: true });
+          })
+      )
+    );
+  },
+
+  async gerarPdfBlob(html, nomeArquivo) {
+    await this.carregarHtml2Pdf();
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.style.cssText =
+      "position:fixed;left:-10000px;top:0;width:190mm;background:#ffffff;pointer-events:none;z-index:-1;";
+
+    const style = document.createElement("style");
+    style.textContent = doc.querySelector("style")?.textContent || "";
+    host.appendChild(style);
+
+    const page = doc.querySelector(".print-page");
+    if (page) host.appendChild(page.cloneNode(true));
+    else host.appendChild(doc.body.cloneNode(true));
+
+    document.body.appendChild(host);
+    await this.aguardarImagens(host);
+
+    try {
+      return await window
+        .html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: nomeArquivo,
+          image: { type: "jpeg", quality: 0.96 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        })
+        .from(host)
+        .outputPdf("blob");
+    } finally {
+      host.remove();
+    }
+  },
+
+  async prepararPacote({ municipio, vagas }) {
     const municipioSel = String(municipio || "").trim();
     const lista = Array.isArray(vagas) ? vagas : [];
     let totalVagas = 0;
@@ -529,9 +612,9 @@ const SalvarVagas = {
       totalVagas,
       unidades,
     });
-    const nomeArquivo = `vagas-${this.slugMunicipio(municipioSel)}.html`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const file = new File([blob], nomeArquivo, { type: "text/html" });
+    const nomeArquivo = `vagas-${this.slugMunicipio(municipioSel)}.pdf`;
+    const blob = await this.gerarPdfBlob(html, nomeArquivo);
+    const file = new File([blob], nomeArquivo, { type: "application/pdf" });
 
     return {
       municipio: municipioSel,
@@ -545,7 +628,7 @@ const SalvarVagas = {
   },
 
   async compartilharNativo(pacote) {
-    if (!navigator.share) return false;
+    if (!navigator.share || !pacote.file) return false;
 
     const payloadArquivo = {
       title: pacote.titulo,
@@ -554,19 +637,8 @@ const SalvarVagas = {
     };
 
     try {
-      if (navigator.canShare && navigator.canShare(payloadArquivo)) {
-        await navigator.share(payloadArquivo);
-        return true;
-      }
-    } catch (error) {
-      if (error && error.name === "AbortError") return true;
-    }
-
-    try {
-      await navigator.share({
-        title: pacote.titulo,
-        text: pacote.texto,
-      });
+      if (navigator.canShare && !navigator.canShare(payloadArquivo)) return false;
+      await navigator.share(payloadArquivo);
       return true;
     } catch (error) {
       if (error && error.name === "AbortError") return true;
@@ -585,12 +657,12 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Escolha como deseja compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Escolha como deseja compartilhar o PDF de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
         <div class="share-sheet__actions">
           <button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>
           <button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir / PDF</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar arquivo</button>
+          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir</button>
+          <button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
@@ -601,14 +673,23 @@ const SalvarVagas = {
       el.addEventListener("click", fechar);
     });
 
-    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", () => {
-      const url = `https://wa.me/?text=${encodeURIComponent(pacote.texto)}`;
-      window.open(url, "_blank", "noopener,noreferrer");
+    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
       fechar();
+      const compartilhou = await this.compartilharNativo(pacote);
+      if (!compartilhou) {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(pacote.blob);
+        link.download = pacote.nomeArquivo;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        window.open(`https://wa.me/?text=${encodeURIComponent(pacote.texto)}`, "_blank", "noopener,noreferrer");
+      }
     });
 
     sheet.querySelector('[data-share="email"]').addEventListener("click", () => {
-      const url = `mailto:?subject=${encodeURIComponent(pacote.titulo)}&body=${encodeURIComponent(pacote.texto)}`;
+      const url = `mailto:?subject=${encodeURIComponent(pacote.titulo)}&body=${encodeURIComponent(
+        `${pacote.texto}\n\n(O PDF também pode ser baixado pelo botão Baixar PDF.)`
+      )}`;
       window.location.href = url;
       fechar();
     });
@@ -630,6 +711,20 @@ const SalvarVagas = {
     document.body.appendChild(sheet);
   },
 
+  definirEstadoBotao(carregando) {
+    const botao = document.getElementById("btn-compartilhar");
+    if (!botao) return;
+    if (carregando) {
+      botao.dataset.labelOriginal = botao.textContent;
+      botao.textContent = "Gerando PDF...";
+      botao.disabled = true;
+      return;
+    }
+    botao.textContent = botao.dataset.labelOriginal || "Compartilhar";
+    const municipio = document.getElementById("filtro-municipio")?.value || "";
+    botao.disabled = !String(municipio).trim();
+  },
+
   async compartilhar({ municipio, vagas }) {
     const municipioSel = String(municipio || "").trim();
     if (!municipioSel) {
@@ -645,8 +740,16 @@ const SalvarVagas = {
       }
     }
 
-    const pacote = this.prepararPacote({ municipio: municipioSel, vagas });
-    const compartilhou = await this.compartilharNativo(pacote);
-    if (!compartilhou) this.abrirMenuFallback(pacote);
+    this.definirEstadoBotao(true);
+    try {
+      const pacote = await this.prepararPacote({ municipio: municipioSel, vagas });
+      const compartilhou = await this.compartilharNativo(pacote);
+      if (!compartilhou) this.abrirMenuFallback(pacote);
+    } catch (error) {
+      console.error(error);
+      alert("Não foi possível gerar o PDF. Tente novamente.");
+    } finally {
+      this.definirEstadoBotao(false);
+    }
   },
 };
