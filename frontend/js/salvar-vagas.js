@@ -331,14 +331,14 @@ const SalvarVagas = {
       .print-vagas-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 8.5px;
+        font-size: 11px;
         table-layout: auto;
       }
 
       .print-vagas-table th,
       .print-vagas-table td {
-        padding: 4px 5px;
-        border: 1px solid #d7e5f0;
+        padding: 5px 6px;
+        border: 0.4pt solid #e4eef5;
         text-align: left;
         vertical-align: top;
         word-break: break-word;
