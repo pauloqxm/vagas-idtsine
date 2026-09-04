@@ -554,52 +554,113 @@ const SalvarVagas = {
     await this.carregarHtml2Pdf();
 
     const doc = new DOMParser().parseFromString(html, "text/html");
+    const cssOriginal = doc.querySelector("style")?.textContent || "";
+
+    // Escopa os estilos no host para não afetar a página e garantir render no PDF
+    const cssEscopado = cssOriginal
+      .replace(/@page\s*\{[\s\S]*?\}/g, "")
+      .replace(/(^|})\s*([^{}@/][^{]*)\{/g, (match, pre, seletor) => {
+        const sel = String(seletor || "").trim();
+        if (!sel || sel.startsWith("@") || sel.startsWith("from") || sel.startsWith("to")) {
+          return match;
+        }
+        const partes = sel
+          .split(",")
+          .map((s) => {
+            const t = s.trim();
+            if (t === "body" || t === "html") return "#pdf-export-host";
+            if (t.startsWith("#pdf-export-host")) return t;
+            return `#pdf-export-host ${t}`;
+          })
+          .join(", ");
+        return `${pre} ${partes} {`;
+      });
+
     const styleEl = document.createElement("style");
     styleEl.id = "pdf-export-style";
-    styleEl.textContent = doc.querySelector("style")?.textContent || "";
+    styleEl.textContent = `
+      #pdf-export-host {
+        box-sizing: border-box;
+        width: 794px;
+        max-width: 794px;
+        padding: 8px;
+        margin: 0;
+        background: #ffffff !important;
+        color: #1f2a37;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+      #pdf-export-host *, #pdf-export-host *::before, #pdf-export-host *::after {
+        box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      ${cssEscopado}
+    `;
     document.head.appendChild(styleEl);
+
+    const overlay = document.createElement("div");
+    overlay.id = "pdf-export-overlay";
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.style.cssText =
+      "position:fixed;inset:0;z-index:2147483646;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;pointer-events:none;";
+    overlay.innerHTML =
+      '<p style="margin:0;color:#003d68;font:800 1rem/1.3 Segoe UI,sans-serif;">Gerando PDF...</p>';
 
     const host = document.createElement("div");
     host.id = "pdf-export-host";
     host.setAttribute("aria-hidden", "true");
+    // Precisa estar visível (opacity 1) e na viewport — html2canvas falha com opacity:0 / offscreen
     host.style.cssText =
-      "position:fixed;left:0;top:0;width:190mm;padding:0;margin:0;background:#ffffff;opacity:0;pointer-events:none;z-index:-1;";
+      "position:fixed;left:0;top:0;width:794px;background:#ffffff;opacity:1;visibility:visible;pointer-events:none;z-index:2147483645;";
 
     const page = doc.querySelector(".print-page");
     if (page) host.appendChild(page.cloneNode(true));
     else host.appendChild(doc.body.cloneNode(true));
 
-    // Remove imagens externas para evitar canvas "tainted" (CORS).
     host.querySelectorAll("img").forEach((img) => img.remove());
-
     document.body.appendChild(host);
+    document.body.appendChild(overlay);
+
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    if (!String(host.textContent || "").trim()) {
+      overlay.remove();
+      host.remove();
+      styleEl.remove();
+      throw new Error("Conteúdo do PDF está vazio.");
+    }
 
     try {
-      const worker = window.html2pdf().set({
-        margin: [8, 8, 8, 8],
-        filename: nomeArquivo,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: {
-          scale: 2,
-          useCORS: false,
-          allowTaint: false,
-          logging: false,
-          backgroundColor: "#ffffff",
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: host.scrollWidth,
-          windowHeight: host.scrollHeight,
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      });
+      const blob = await window
+        .html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: nomeArquivo,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 1.5,
+            useCORS: false,
+            allowTaint: false,
+            logging: false,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: 794,
+            windowHeight: Math.max(host.scrollHeight, 1123),
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        })
+        .from(host)
+        .outputPdf("blob");
 
-      const blob = await worker.from(host).outputPdf("blob");
-      if (!(blob instanceof Blob) || blob.size < 100) {
+      if (!(blob instanceof Blob) || blob.size < 1500) {
         throw new Error("PDF gerado está vazio ou inválido.");
       }
       return blob;
     } finally {
+      overlay.remove();
       host.remove();
       styleEl.remove();
     }
