@@ -10,8 +10,6 @@ const UNIDADES_SOURCE = "source-unidades";
 const UNIDADES_LAYER = "layer-unidades";
 const PINO_UNIDADE_URL = "https://i.ibb.co/N6jfVtjN/pino-unidade.png";
 const PINO_UNIDADE_IMAGE_ID = "pino-unidade-idt";
-const SAA_URL = "https://idt.org.br/saa4/login";
-
 const MAP_STYLE = {
   version: 8,
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -345,7 +343,7 @@ function renderTabelaVagas() {
   if (vagasTabelaAtual.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" class="map-vagas-empty">Nenhuma vaga encontrada para este filtro.</td>
+        <td colspan="5" class="map-vagas-empty">Nenhuma vaga encontrada para este filtro.</td>
       </tr>
     `;
     if (paginacao) {
@@ -375,9 +373,6 @@ function renderTabelaVagas() {
           <td><span class="map-vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
           <td>${escapeHtml(p.municipio || "Não informado")}</td>
           <td>${escapeHtml(p.unidade || "Não informado")}</td>
-          <td>
-            <a class="map-table-action" href="${escapeAttr(SAA_URL)}" target="_blank" rel="noopener noreferrer">Escolher a vaga</a>
-          </td>
         </tr>
       `;
     })
@@ -716,9 +711,6 @@ function buildVagaPopupHtml(props) {
           <tr><td>E-mail</td><td>${escapeHtml(email || "Não informado")}</td></tr>
         </tbody>
       </table>
-      <div class="popup-actions">
-        <a class="map-popup-btn" href="${escapeAttr(SAA_URL)}" target="_blank" rel="noopener noreferrer">Escolher a vaga</a>
-      </div>
     </div>
   `;
 }
@@ -742,10 +734,13 @@ function buildUnidadePopupHtml(props, coords) {
           <tr><td>Celular</td><td>${escapeHtml(celular || "Não informado")}</td></tr>
         </tbody>
       </table>
-      <div class="popup-actions">
-        <a class="map-popup-btn" href="${escapeAttr(SAA_URL)}" target="_blank" rel="noopener noreferrer">Escolher a vaga</a>
-        ${rota ? `<a class="map-popup-btn map-popup-btn-route" href="${escapeAttr(rota)}" target="_blank" rel="noopener noreferrer">Traçar rota</a>` : ""}
-      </div>
+      ${
+        rota
+          ? `<div class="popup-actions">
+        <a class="map-popup-btn map-popup-btn-route" href="${escapeAttr(rota)}" target="_blank" rel="noopener noreferrer">Traçar rota</a>
+      </div>`
+          : ""
+      }
     </div>
   `;
 }

@@ -1,5 +1,4 @@
 const DetalhesVaga = {
-  SAA_URL: "https://idt.org.br/saa4/login",
   postosPorCodigo: new Map(),
   _postosPromise: null,
   els: {},
@@ -65,34 +64,6 @@ const DetalhesVaga = {
     return Number.isFinite(valor) && valor > 0 ? valor : 1;
   },
 
-  contatoPrincipal(vaga) {
-    const email = String(vaga.email_contato || "").trim();
-    const tel =
-      String(vaga.telefone_unidade || "").trim() ||
-      String(vaga.celular_responsavel || "").trim() ||
-      String(vaga.telefone || "").trim();
-
-    if (tel) {
-      return {
-        tipo: "telefone",
-        texto: tel,
-        href: this.SAA_URL,
-        acao: "Escolher a vaga",
-      };
-    }
-
-    if (email) {
-      return {
-        tipo: "email",
-        texto: email,
-        href: this.SAA_URL,
-        acao: "Escolher a vaga",
-      };
-    }
-
-    return null;
-  },
-
   async abrir(vaga) {
     if (!vaga || !this.els.modal || !this.els.modalBody) return;
 
@@ -104,7 +75,6 @@ const DetalhesVaga = {
       posto_atendimento: String(vaga.posto_atendimento || "").trim(),
     });
     const posto = this.dadosDoPosto(dados.posto_atendimento);
-    const contato = this.contatoPrincipal(dados);
     const email = String(dados.email_contato || "").trim();
     const responsavelUnidade = String(dados.responsavel_unidade || "").trim();
     const telefoneUnidade = String(dados.telefone_unidade || "").trim();
@@ -128,7 +98,6 @@ const DetalhesVaga = {
         ${email ? `<div><strong>E-mail:</strong> <a href="mailto:${this.escapeAttr(email)}">${this.escapeHtml(email)}</a></div>` : ""}
       </div>
       <div class="modal-actions">
-        ${contato ? `<a class="btn btn-call" href="${this.escapeAttr(contato.href)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(contato.acao)}</a>` : ""}
         <button type="button" class="btn btn-light" id="modal-fechar-btn">Fechar</button>
       </div>
     `;

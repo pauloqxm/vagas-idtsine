@@ -15,8 +15,6 @@ const state = {
   dataMaisRecente: null,
 };
 
-const SAA_URL = "https://idt.org.br/saa4/login";
-
 const els = {};
 
 function cacheEls() {
@@ -39,6 +37,7 @@ function cacheEls() {
   els.kpiNaoPcd = document.getElementById("kpi-vagas-nao-pcd");
   els.ultimaAtualizacao = document.getElementById("ultima-atualizacao");
   els.viewButtons = document.querySelectorAll("[data-view]");
+  els.compartilhar = document.getElementById("btn-compartilhar");
 }
 
 function normalizar(txt) {
@@ -94,34 +93,6 @@ function dataDentroPeriodo(dataTexto, periodo) {
   if (periodo === "mais-recente" || periodo === "hoje") return diferenca === 0;
   const dias = Number(periodo);
   return Number.isFinite(dias) ? diferenca < dias : true;
-}
-
-function contatoPrincipal(vaga) {
-  const email = String(vaga.email_contato || "").trim();
-  const tel =
-    String(vaga.telefone_unidade || "").trim() ||
-    String(vaga.celular_responsavel || "").trim() ||
-    String(vaga.telefone || "").trim();
-
-  if (tel) {
-    return {
-      tipo: "telefone",
-      texto: tel,
-      href: SAA_URL,
-      acao: "Escolher a vaga",
-    };
-  }
-
-  if (email) {
-    return {
-      tipo: "email",
-      texto: email,
-      href: SAA_URL,
-      acao: "Escolher a vaga",
-    };
-  }
-
-  return null;
 }
 
 function dadosDoPosto(posto) {
@@ -254,8 +225,49 @@ function atualizarStatus() {
 function render() {
   atualizarStatus();
   atualizarKPIs();
+  atualizarBotaoCompartilhar();
   renderLista();
   renderPaginacao();
+}
+
+function atualizarBotaoCompartilhar() {
+  if (!els.compartilhar) return;
+  const municipio = String(els.municipio.value || state.filtros.municipio || "").trim();
+  const habilitado = Boolean(municipio);
+  els.compartilhar.disabled = !habilitado;
+  els.compartilhar.title = habilitado
+    ? `Compartilhar as vagas de ${municipio}`
+    : "Selecione um município para compartilhar as vagas";
+}
+
+function vagasDoMunicipioParaCompartilhar(municipio) {
+  const alvo = normalizar(municipio);
+  return state.vagas
+    .filter((vaga) => {
+      if (normalizar(vaga.municipio) !== alvo) return false;
+      if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
+      if (state.filtros.pcd && !vaga.pcd) return false;
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        String(a.ocupacao || "").localeCompare(String(b.ocupacao || ""), "pt-BR") ||
+        String(a.unidade || "").localeCompare(String(b.unidade || ""), "pt-BR")
+    );
+}
+
+async function compartilharVagasMunicipio() {
+  const municipio = String(els.municipio.value || state.filtros.municipio || "").trim();
+  if (!municipio) {
+    alert("Selecione um município para compartilhar as vagas.");
+    els.municipio.focus();
+    return;
+  }
+
+  await SalvarVagas.compartilhar({
+    municipio,
+    vagas: vagasDoMunicipioParaCompartilhar(municipio),
+  });
 }
 
 function textoRankingVaga(vaga) {
@@ -440,10 +452,6 @@ function diasOfertadas(vaga) {
 }
 
 function renderCard(vaga) {
-  const contato = contatoPrincipal(vaga);
-  const contatoHtml = contato
-    ? `<a class="btn btn-call" href="${escapeAttr(contato.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contato.acao)}</a>`
-    : "";
   const pcd = vaga.pcd ? '<span class="tag tag-pcd">PCD</span>' : "";
   const mapaHref = `mapa.html?vaga=${encodeURIComponent(vaga.id)}`;
 
@@ -467,17 +475,12 @@ function renderCard(vaga) {
       <div class="vaga-actions">
         <button type="button" class="btn btn-primary" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
         <a class="btn btn-map" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
-        ${contatoHtml}
       </div>
     </article>
   `;
 }
 
 function renderLinhaTabela(vaga) {
-  const contato = contatoPrincipal(vaga);
-  const contatoHtml = contato
-    ? `<a class="btn btn-call btn-sm" href="${escapeAttr(contato.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(contato.acao)}</a>`
-    : "";
   const mapaHref = `mapa.html?vaga=${encodeURIComponent(vaga.id)}`;
   const pcd = vaga.pcd === true || vaga.pcd === "true";
 
@@ -498,7 +501,6 @@ function renderLinhaTabela(vaga) {
         <div class="vagas-table-actions">
           <button type="button" class="btn btn-primary btn-sm" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
           <a class="btn btn-map btn-sm" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
-          ${contatoHtml}
         </div>
       </td>
     </tr>
@@ -627,6 +629,8 @@ function bindEvents() {
       definirVisualizacao(btn.dataset.view || "cards");
     });
   });
+
+  els.compartilhar?.addEventListener("click", compartilharVagasMunicipio);
 
   els.limpar.addEventListener("click", limparBusca);
   document.querySelector(".modal__close").addEventListener("click", fecharModal);

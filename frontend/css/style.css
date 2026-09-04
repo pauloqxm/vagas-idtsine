@@ -705,8 +705,113 @@ h1 {
 
 .results-toolbar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
   margin-bottom: 0.85rem;
+}
+
+.btn-compartilhar {
+  min-height: 40px;
+  padding: 0.45rem 1.05rem;
+  border-radius: 999px;
+  background: var(--idt-blue);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.btn-compartilhar:hover,
+.btn-compartilhar:focus-visible {
+  background: #00578c;
+  outline: none;
+}
+
+.btn-compartilhar:disabled {
+  background: #9aa8b8;
+  color: #f3f6f9;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.share-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: end center;
+}
+
+.share-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.share-sheet__panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 1.5rem));
+  margin: 0 0 1rem;
+  padding: 1.1rem 1.15rem 1rem;
+  border-radius: 18px 18px 14px 14px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(0, 61, 104, 0.22);
+}
+
+.share-sheet__panel h3 {
+  margin: 0 0 0.35rem;
+  color: var(--idt-blue);
+  font-size: 1.15rem;
+}
+
+.share-sheet__panel p {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.share-sheet__actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.share-sheet__btn {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #fff;
+}
+
+.share-sheet__btn--whatsapp {
+  background: #25d366;
+}
+
+.share-sheet__btn--email {
+  background: var(--idt-blue);
+}
+
+.share-sheet__btn--print {
+  background: var(--idt-orange);
+}
+
+.share-sheet__btn--download {
+  background: var(--idt-green);
+}
+
+.share-sheet__close {
+  display: block;
+  width: 100%;
+  margin-top: 0.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.55rem;
 }
 
 .view-toggle {
@@ -1748,6 +1853,10 @@ h1 {
 
   .results-toolbar {
     justify-content: stretch;
+  }
+
+  .btn-compartilhar {
+    width: 100%;
   }
 
   .view-toggle {
