@@ -162,6 +162,26 @@ function popularFiltrosSuspensos() {
   }
 }
 
+function aplicarFiltrosDaURL() {
+  const params = new URLSearchParams(window.location.search);
+  const municipioParam = String(params.get("municipio") || "").trim();
+  if (municipioParam && els.municipio) {
+    const match = [...els.municipio.options].find(
+      (opt) => opt.value && normalizar(opt.value) === normalizar(municipioParam)
+    );
+    if (match) {
+      els.municipio.value = match.value;
+      state.filtros.municipio = match.value;
+    }
+  }
+
+  const view = String(params.get("view") || "").toLowerCase();
+  if (view === "tabela" || view === "table") {
+    state.viewMode = "table";
+    atualizarBotoesVisualizacao();
+  }
+}
+
 function aplicarFiltros() {
   const { cargo, unidade, municipio, dataPeriodo, pcd } = state.filtros;
 
@@ -267,6 +287,7 @@ async function compartilharVagasMunicipio() {
   await SalvarVagas.compartilhar({
     municipio,
     vagas: vagasDoMunicipioParaCompartilhar(municipio),
+    formato: state.viewMode,
   });
 }
 
@@ -486,18 +507,18 @@ function renderLinhaTabela(vaga) {
 
   return `
     <tr>
-      <td>
+      <td data-label="Ocupação">
         <button type="button" class="vagas-table-link" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}" title="Ver detalhes da vaga">
           ${escapeHtml(vaga.ocupacao || "Vaga sem nome")}
         </button>
       </td>
-      <td>${qtde(vaga)}</td>
-      <td>${escapeHtml(vaga.municipio || "Não informado")}</td>
-      <td>${escapeHtml(vaga.unidade || "Não informado")}</td>
-      <td>${escapeHtml(vaga.data_disponibilidade || "—")}</td>
-      <td>${diasOfertadas(vaga)}</td>
-      <td><span class="vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
-      <td>
+      <td data-label="Qtde">${qtde(vaga)}</td>
+      <td data-label="Cidade">${escapeHtml(vaga.municipio || "Não informado")}</td>
+      <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
+      <td data-label="Publicada">${escapeHtml(vaga.data_disponibilidade || "—")}</td>
+      <td data-label="Dias ofertadas">${diasOfertadas(vaga)}</td>
+      <td data-label="PCD"><span class="vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+      <td data-label="Ações">
         <div class="vagas-table-actions">
           <button type="button" class="btn btn-primary btn-sm" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
           <a class="btn btn-map btn-sm" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
@@ -661,6 +682,7 @@ async function init() {
   try {
     await carregarVagas();
     popularFiltrosSuspensos();
+    aplicarFiltrosDaURL();
     renderPopulares();
     aplicarFiltros();
   } catch (error) {

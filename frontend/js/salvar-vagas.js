@@ -123,6 +123,44 @@ const SalvarVagas = {
     `;
   },
 
+  renderTabela(vagas) {
+    const linhas = (vagas || [])
+      .map((vaga) => {
+        const pcd = vaga.pcd === true || vaga.pcd === "true";
+        return `
+          <tr>
+            <td>${this.escapeHtml(vaga.ocupacao || "Vaga sem nome")}</td>
+            <td>${this.qtde(vaga)}</td>
+            <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
+            <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
+            <td>${this.escapeHtml(vaga.data_disponibilidade || "—")}</td>
+            <td>${this.diasOfertadas(vaga)}</td>
+            <td><span class="print-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    return `
+      <div class="print-vagas-table-wrap">
+        <table class="print-vagas-table">
+          <thead>
+            <tr>
+              <th>Ocupação</th>
+              <th>Qtde</th>
+              <th>Cidade</th>
+              <th>Unidade</th>
+              <th>Publicada</th>
+              <th>Dias ofertadas</th>
+              <th>PCD</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+    `;
+  },
+
   renderUnidades(unidades) {
     if (!unidades.length) {
       return `
@@ -147,11 +185,12 @@ const SalvarVagas = {
       .join("");
   },
 
-  estilos() {
+  estilos(formato) {
+    const emTabela = formato === "table" || formato === "tabela";
     return `
       @page {
-        size: A4;
-        margin: 12mm 10mm;
+        size: A4${emTabela ? " landscape" : ""};
+        margin: ${emTabela ? "8mm 8mm" : "12mm 10mm"};
       }
 
       * { box-sizing: border-box; }
@@ -168,7 +207,7 @@ const SalvarVagas = {
 
       .print-page {
         width: 100%;
-        max-width: 190mm;
+        max-width: ${emTabela ? "100%" : "190mm"};
         margin: 0 auto;
         padding: 4px;
       }
@@ -283,6 +322,68 @@ const SalvarVagas = {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
+      }
+
+      .print-vagas-table-wrap {
+        width: 100%;
+        overflow: visible;
+      }
+
+      .print-vagas-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5px;
+        table-layout: auto;
+      }
+
+      .print-vagas-table th,
+      .print-vagas-table td {
+        padding: 5px 6px;
+        border: 1px solid #d7e5f0;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .print-vagas-table th:nth-child(2),
+      .print-vagas-table td:nth-child(2),
+      .print-vagas-table th:nth-child(5),
+      .print-vagas-table td:nth-child(5),
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6),
+      .print-vagas-table th:nth-child(7),
+      .print-vagas-table td:nth-child(7) {
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      .print-vagas-table th {
+        background: #e8f7ef;
+        color: #008f4b;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .print-vagas-table tbody tr:nth-child(even) {
+        background: #f7fbf8;
+      }
+
+      .print-vagas-table tbody tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .print-pcd {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #e8f7ef;
+        color: #008f4b;
+        font-weight: 800;
+      }
+
+      .print-pcd.is-pcd {
+        background: #fff4ef;
+        color: #d95415;
       }
 
       .print-card {
@@ -431,14 +532,17 @@ const SalvarVagas = {
     `;
   },
 
-  montarDocumento({ municipio, vagas, totalVagas, totalPcd, unidades, logoSrc }) {
+  montarDocumento({ municipio, vagas, totalVagas, totalPcd, unidades, logoSrc, formato }) {
     const data = this.dataHojeBR();
     const logo =
       logoSrc ||
       "https://www.idt.org.br/assets/img/logos/logo_grande.png";
-    const cards =
+    const emTabela = formato === "table" || formato === "tabela";
+    const conteudo =
       vagas.length > 0
-        ? `<div class="print-grid">${vagas.map((vaga, i) => this.renderCard(vaga, i)).join("")}</div>`
+        ? emTabela
+          ? this.renderTabela(vagas)
+          : `<div class="print-grid">${vagas.map((vaga, i) => this.renderCard(vaga, i)).join("")}</div>`
         : `<div class="print-empty">Nenhuma vaga encontrada para este município.</div>`;
 
     return `<!DOCTYPE html>
@@ -446,7 +550,7 @@ const SalvarVagas = {
 <head>
   <meta charset="UTF-8" />
   <title>Vagas - ${this.escapeHtml(municipio)} - ${data}</title>
-  <style>${this.estilos()}</style>
+  <style>${this.estilos(formato)}</style>
 </head>
 <body>
   <div class="print-page">
@@ -479,7 +583,7 @@ const SalvarVagas = {
       }
     </div>
 
-    ${cards}
+    ${conteudo}
 
     <footer class="print-footer">
       Documento gerado pelo portal de Vagas de Emprego do IDT — página formatada em A4.
@@ -496,6 +600,17 @@ const SalvarVagas = {
 
   montarTextoEmail(municipio) {
     return `Segue em anexo o PDF com as vagas formatadas.\n\n${this.montarTextoWhatsApp(municipio)}`;
+  },
+
+  montarLinkMunicipio(municipio, formato) {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("municipio", String(municipio || "").trim());
+    if (formato === "table" || formato === "tabela") {
+      url.searchParams.set("view", "tabela");
+    }
+    return url.toString();
   },
 
   nomeArquivoPdf(municipio) {
@@ -875,7 +990,7 @@ const SalvarVagas = {
     }
   },
 
-  async prepararPacote({ municipio, vagas }) {
+  async prepararPacote({ municipio, vagas, formato }) {
     const municipioSel = String(municipio || "").trim();
     const lista = Array.isArray(vagas) ? vagas : [];
     let totalVagas = 0;
@@ -895,12 +1010,15 @@ const SalvarVagas = {
       totalPcd,
       unidades,
       logoSrc,
+      formato,
     });
     const texto = this.montarTextoWhatsApp(municipioSel);
     const nomeArquivo = this.nomeArquivoPdf(municipioSel);
+    const linkMunicipio = this.montarLinkMunicipio(municipioSel, formato);
 
     return {
       municipio: municipioSel,
+      formato,
       html,
       texto,
       textoEmail: this.montarTextoEmail(municipioSel),
@@ -909,6 +1027,7 @@ const SalvarVagas = {
       blob: null,
       imagens: [],
       nomeArquivo,
+      linkMunicipio,
     };
   },
 
@@ -986,10 +1105,49 @@ const SalvarVagas = {
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
   },
 
+  montarTextoLink(pacote) {
+    const url =
+      pacote.linkMunicipio ||
+      this.montarLinkMunicipio(pacote.municipio, pacote.formato);
+    return {
+      url,
+      texto: `Vagas de ${pacote.municipio} — ${this.dataHojeBR()}\n${url}`,
+    };
+  },
+
+  async enviarLink(pacote) {
+    const { url, texto } = this.montarTextoLink(pacote);
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Vagas de ${pacote.municipio}`,
+          text: texto,
+          url,
+        });
+        return;
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (_) {
+      /* segue para WhatsApp / prompt */
+    }
+
+    const janela = window.open(this.urlWhatsApp(texto), "_blank", "noopener");
+    if (!janela) {
+      window.prompt("Copie o link do município já filtrado:", url);
+    }
+  },
+
   abrirMenuCompartilhar(pacote) {
     const existente = document.getElementById("share-sheet");
     if (existente) existente.remove();
 
+    const emTabela = pacote.formato === "table" || pacote.formato === "tabela";
     const sheet = document.createElement("div");
     sheet.id = "share-sheet";
     sheet.className = "share-sheet";
@@ -998,9 +1156,14 @@ const SalvarVagas = {
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
         <p>Vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong> prontas para envio.</p>
-        <p class="share-sheet__aviso"><strong>Clique em Compartilhar</strong> na próxima tela (ícone de envio) para mandar pelo WhatsApp ou salvar o PDF.</p>
+        <p class="share-sheet__aviso">${
+          emTabela
+            ? "O documento será gerado em <strong>tabela</strong>, no mesmo formato da tela."
+            : "O documento será gerado em <strong>cards</strong>, no mesmo formato da tela."
+        } Você também pode enviar o link do município já filtrado.</p>
         <div class="share-sheet__actions">
           <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir</button>
+          <button type="button" class="share-sheet__btn share-sheet__btn--link" data-share="link">Enviar link do município</button>
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
@@ -1023,6 +1186,10 @@ const SalvarVagas = {
       this.definirEstadoBotao(false);
     });
 
+    sheet.querySelector('[data-share="link"]').addEventListener("click", () => {
+      this.enviarLink(pacote);
+    });
+
     document.body.appendChild(sheet);
   },
 
@@ -1040,7 +1207,7 @@ const SalvarVagas = {
     botao.disabled = !String(municipio).trim();
   },
 
-  async compartilhar({ municipio, vagas }) {
+  async compartilhar({ municipio, vagas, formato }) {
     const municipioSel = String(municipio || "").trim();
     if (!municipioSel) {
       alert("Selecione um município para compartilhar as vagas.");
@@ -1058,7 +1225,7 @@ const SalvarVagas = {
     this.definirEstadoBotao(true);
     this.limparResiduos();
     try {
-      const pacote = await this.prepararPacote({ municipio: municipioSel, vagas });
+      const pacote = await this.prepararPacote({ municipio: municipioSel, vagas, formato });
       this.abrirMenuCompartilhar(pacote);
     } catch (error) {
       console.error(error);
@@ -1076,9 +1243,11 @@ const SalvarVagas = {
         totalPcd: 0,
         unidades,
         logoSrc,
+        formato,
       });
       this.abrirMenuCompartilhar({
         municipio: municipioSel,
+        formato,
         html,
         texto: this.montarTextoWhatsApp(municipioSel),
         textoEmail: this.montarTextoEmail(municipioSel),
@@ -1086,6 +1255,7 @@ const SalvarVagas = {
         blob: null,
         file: null,
         nomeArquivo: this.nomeArquivoPdf(municipioSel),
+        linkMunicipio: this.montarLinkMunicipio(municipioSel, formato),
       });
     } finally {
       this.definirEstadoBotao(false);

@@ -364,15 +364,15 @@ function renderTabelaVagas() {
       const globalIndex = inicio + pageIndex;
       return `
         <tr>
-          <td>
+          <td data-label="Ocupação">
             <button type="button" class="map-table-vaga-link" data-vaga-index="${globalIndex}" title="Ver detalhes da vaga">
               ${escapeHtml(ocupacao)}
             </button>
           </td>
-          <td>${Number(p.qtde_vagas) || 1}</td>
-          <td><span class="map-vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
-          <td>${escapeHtml(p.municipio || "Não informado")}</td>
-          <td>${escapeHtml(p.unidade || "Não informado")}</td>
+          <td data-label="Quantidade">${Number(p.qtde_vagas) || 1}</td>
+          <td data-label="PCD"><span class="map-vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+          <td data-label="Município">${escapeHtml(p.municipio || "Não informado")}</td>
+          <td data-label="Unidade">${escapeHtml(p.unidade || "Não informado")}</td>
         </tr>
       `;
     })

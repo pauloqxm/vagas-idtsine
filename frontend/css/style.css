@@ -806,6 +806,10 @@ h1 {
   background: var(--idt-orange);
 }
 
+.share-sheet__btn--link {
+  background: var(--idt-blue);
+}
+
 .share-sheet__btn--download {
   background: var(--idt-green);
 }
@@ -1758,6 +1762,133 @@ h1 {
 
   .help-card {
     position: static;
+  }
+
+  .vagas-table-scroll,
+  .map-vagas-table-scroll {
+    overflow: visible;
+  }
+
+  .vagas-table,
+  .map-vagas-table {
+    min-width: 0;
+  }
+
+  .vagas-table thead,
+  .map-vagas-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .vagas-table tbody,
+  .map-vagas-table tbody,
+  .vagas-table tr,
+  .map-vagas-table tr,
+  .vagas-table td,
+  .map-vagas-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .vagas-table tbody tr,
+  .map-vagas-table tbody tr {
+    padding: 0.9rem 0.95rem 1rem;
+    border-bottom: 1px solid #e5eee9;
+    background: #fff;
+  }
+
+  .vagas-table tbody tr + tr,
+  .map-vagas-table tbody tr + tr {
+    border-top: 8px solid #f3f7fb;
+  }
+
+  .vagas-table tbody tr:nth-child(even),
+  .map-vagas-table tbody tr:nth-child(even) {
+    background: #f7fbf8;
+  }
+
+  .vagas-table tbody tr:last-child,
+  .map-vagas-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .vagas-table td,
+  .map-vagas-table td {
+    display: grid;
+    grid-template-columns: minmax(7.2rem, 36%) minmax(0, 1fr);
+    gap: 0.45rem 0.7rem;
+    align-items: start;
+    padding: 0.38rem 0;
+    border-bottom: 0;
+  }
+
+  .vagas-table td::before,
+  .map-vagas-table td::before {
+    content: attr(data-label);
+    color: var(--idt-green-hover);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .vagas-table td[data-label="Ocupação"],
+  .map-vagas-table td[data-label="Ocupação"] {
+    display: block;
+    margin-bottom: 0.45rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px dashed #d7e5dc;
+  }
+
+  .vagas-table td[data-label="Ocupação"]::before,
+  .map-vagas-table td[data-label="Ocupação"]::before {
+    display: none;
+  }
+
+  .vagas-table-link,
+  .map-table-vaga-link {
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .vagas-table td[data-label="Ações"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
+
+  .vagas-table td[data-label="Ações"]::before {
+    display: none;
+  }
+
+  .vagas-table-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .vagas-table-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .map-vagas-empty {
+    display: block;
+    padding: 1rem 0.2rem;
+    text-align: center;
+  }
+
+  .map-vagas-empty::before {
+    content: none;
   }
 }
 
