@@ -186,11 +186,10 @@ const SalvarVagas = {
   },
 
   estilos(formato) {
-    const emTabela = formato === "table" || formato === "tabela";
     return `
       @page {
-        size: A4${emTabela ? " landscape" : ""};
-        margin: ${emTabela ? "8mm 8mm" : "12mm 10mm"};
+        size: A4 portrait;
+        margin: 12mm 10mm;
       }
 
       * { box-sizing: border-box; }
@@ -207,7 +206,7 @@ const SalvarVagas = {
 
       .print-page {
         width: 100%;
-        max-width: ${emTabela ? "100%" : "190mm"};
+        max-width: 190mm;
         margin: 0 auto;
         padding: 4px;
       }
@@ -332,16 +331,17 @@ const SalvarVagas = {
       .print-vagas-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 9.5px;
+        font-size: 8.5px;
         table-layout: auto;
       }
 
       .print-vagas-table th,
       .print-vagas-table td {
-        padding: 5px 6px;
+        padding: 4px 5px;
         border: 1px solid #d7e5f0;
         text-align: left;
         vertical-align: top;
+        word-break: break-word;
       }
 
       .print-vagas-table th:nth-child(2),
@@ -360,7 +360,6 @@ const SalvarVagas = {
         background: #e8f7ef;
         color: #008f4b;
         font-weight: 900;
-        white-space: nowrap;
       }
 
       .print-vagas-table tbody tr:nth-child(even) {
