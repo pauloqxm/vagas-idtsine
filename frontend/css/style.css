@@ -772,6 +772,14 @@ h1 {
   font-size: 0.92rem;
 }
 
+.share-sheet__aviso {
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: var(--idt-orange-soft);
+  color: var(--idt-blue) !important;
+  font-weight: 700;
+}
+
 .share-sheet__actions {
   display: grid;
   gap: 0.55rem;

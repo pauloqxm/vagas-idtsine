@@ -899,33 +899,15 @@ const SalvarVagas = {
     const texto = this.montarTextoWhatsApp(municipioSel);
     const nomeArquivo = this.nomeArquivoPdf(municipioSel);
 
-    let blob = null;
-    let file = null;
-    let imagens = [];
-    try {
-      blob = await this.gerarPdfDoHtml(html, nomeArquivo);
-      file = new File([blob], nomeArquivo, { type: "application/pdf" });
-    } catch (error) {
-      console.error(error);
-      try {
-        const gerado = await this.gerarArquivos(html, nomeArquivo);
-        blob = gerado.blob;
-        imagens = gerado.imagens || [];
-        if (blob) file = new File([blob], nomeArquivo, { type: "application/pdf" });
-      } catch (erroArquivos) {
-        console.error(erroArquivos);
-      }
-    }
-
     return {
       municipio: municipioSel,
       html,
       texto,
       textoEmail: this.montarTextoEmail(municipioSel),
       titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
-      file,
-      blob,
-      imagens,
+      file: null,
+      blob: null,
+      imagens: [],
       nomeArquivo,
     };
   },
@@ -1015,11 +997,10 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Documento pronto. Escolha como compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong> prontas para envio.</p>
+        <p class="share-sheet__aviso"><strong>Clique em Compartilhar</strong> na próxima tela (ícone de envio) para mandar pelo WhatsApp ou salvar o PDF.</p>
         <div class="share-sheet__actions">
-          <button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>
           <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Download</button>
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
@@ -1035,23 +1016,9 @@ const SalvarVagas = {
       el.addEventListener("click", fecharELimpar);
     });
 
-    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
-      sheet.remove();
-      await this.enviarWhatsApp(pacote);
-      this.limparResiduos();
-      this.definirEstadoBotao(false);
-    });
-
     sheet.querySelector('[data-share="print"]').addEventListener("click", () => {
       sheet.remove();
       this.abrirImpressao(pacote.html);
-      this.limparResiduos();
-      this.definirEstadoBotao(false);
-    });
-
-    sheet.querySelector('[data-share="download"]').addEventListener("click", async () => {
-      sheet.remove();
-      await this.enviarDownload(pacote);
       this.limparResiduos();
       this.definirEstadoBotao(false);
     });
