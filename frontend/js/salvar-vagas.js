@@ -167,10 +167,19 @@ const SalvarVagas = {
         gap: 12px;
       }
 
-      .print-header__brand img {
+      .print-logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
         height: 42px;
-        width: auto;
-        object-fit: contain;
+        padding: 0 10px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #00a859, #003d68);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
       }
 
       .print-header__title {
@@ -417,7 +426,7 @@ const SalvarVagas = {
     <header class="print-header">
       <div class="print-header__top">
         <div class="print-header__brand">
-          <img src="https://www.idt.org.br/assets/img/logos/logo_grande.png" alt="IDT" />
+          <span class="print-logo" aria-label="IDT">IDT</span>
           <h1 class="print-header__title">
             Vagas de Emprego
             <span>${this.escapeHtml(municipio)}</span>
@@ -508,82 +517,91 @@ const SalvarVagas = {
     if (typeof window.html2pdf === "function") return Promise.resolve();
     if (this._html2pdfPromise) return this._html2pdfPromise;
 
-    this._html2pdfPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-      script.async = true;
-      script.onload = () => {
-        if (typeof window.html2pdf === "function") resolve();
-        else reject(new Error("Biblioteca html2pdf indisponível."));
-      };
-      script.onerror = () => reject(new Error("Não foi possível carregar a biblioteca de PDF."));
-      document.head.appendChild(script);
-    }).catch((error) => {
+    const fontes = [
+      "js/vendor/html2pdf.bundle.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
+      "https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js",
+    ];
+
+    this._html2pdfPromise = (async () => {
+      let ultimoErro = null;
+      for (const src of fontes) {
+        try {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = src;
+            script.async = true;
+            script.onload = () => {
+              if (typeof window.html2pdf === "function") resolve();
+              else reject(new Error("html2pdf não disponível após carregar o script."));
+            };
+            script.onerror = () => reject(new Error(`Falha ao carregar ${src}`));
+            document.head.appendChild(script);
+          });
+          return;
+        } catch (error) {
+          ultimoErro = error;
+        }
+      }
       this._html2pdfPromise = null;
-      throw error;
-    });
+      throw ultimoErro || new Error("Não foi possível carregar a biblioteca de PDF.");
+    })();
 
     return this._html2pdfPromise;
-  },
-
-  async aguardarImagens(raiz) {
-    const imagens = [...raiz.querySelectorAll("img")];
-    await Promise.all(
-      imagens.map(
-        (img) =>
-          new Promise((resolve) => {
-            if (img.complete) {
-              resolve();
-              return;
-            }
-            img.addEventListener("load", resolve, { once: true });
-            img.addEventListener("error", resolve, { once: true });
-          })
-      )
-    );
   },
 
   async gerarPdfBlob(html, nomeArquivo) {
     await this.carregarHtml2Pdf();
 
     const doc = new DOMParser().parseFromString(html, "text/html");
+    const styleEl = document.createElement("style");
+    styleEl.id = "pdf-export-style";
+    styleEl.textContent = doc.querySelector("style")?.textContent || "";
+    document.head.appendChild(styleEl);
+
     const host = document.createElement("div");
+    host.id = "pdf-export-host";
     host.setAttribute("aria-hidden", "true");
     host.style.cssText =
-      "position:fixed;left:-10000px;top:0;width:190mm;background:#ffffff;pointer-events:none;z-index:-1;";
-
-    const style = document.createElement("style");
-    style.textContent = doc.querySelector("style")?.textContent || "";
-    host.appendChild(style);
+      "position:fixed;left:0;top:0;width:190mm;padding:0;margin:0;background:#ffffff;opacity:0;pointer-events:none;z-index:-1;";
 
     const page = doc.querySelector(".print-page");
     if (page) host.appendChild(page.cloneNode(true));
     else host.appendChild(doc.body.cloneNode(true));
 
+    // Remove imagens externas para evitar canvas "tainted" (CORS).
+    host.querySelectorAll("img").forEach((img) => img.remove());
+
     document.body.appendChild(host);
-    await this.aguardarImagens(host);
 
     try {
-      return await window
-        .html2pdf()
-        .set({
-          margin: [8, 8, 8, 8],
-          filename: nomeArquivo,
-          image: { type: "jpeg", quality: 0.96 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        })
-        .from(host)
-        .outputPdf("blob");
+      const worker = window.html2pdf().set({
+        margin: [8, 8, 8, 8],
+        filename: nomeArquivo,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          useCORS: false,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: host.scrollWidth,
+          windowHeight: host.scrollHeight,
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      });
+
+      const blob = await worker.from(host).outputPdf("blob");
+      if (!(blob instanceof Blob) || blob.size < 100) {
+        throw new Error("PDF gerado está vazio ou inválido.");
+      }
+      return blob;
     } finally {
       host.remove();
+      styleEl.remove();
     }
   },
 
@@ -650,6 +668,7 @@ const SalvarVagas = {
     const existente = document.getElementById("share-sheet");
     if (existente) existente.remove();
 
+    const temPdf = Boolean(pacote.blob);
     const sheet = document.createElement("div");
     sheet.id = "share-sheet";
     sheet.className = "share-sheet";
@@ -657,12 +676,12 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Escolha como deseja compartilhar o PDF de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Escolha como deseja compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
         <div class="share-sheet__actions">
-          <button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>
+          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>` : ""}
+          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>` : ""}
+          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir / Salvar PDF</button>
+          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>` : ""}
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
@@ -673,7 +692,7 @@ const SalvarVagas = {
       el.addEventListener("click", fechar);
     });
 
-    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
+    sheet.querySelector('[data-share="whatsapp"]')?.addEventListener("click", async () => {
       fechar();
       const compartilhou = await this.compartilharNativo(pacote);
       if (!compartilhou) {
@@ -686,7 +705,7 @@ const SalvarVagas = {
       }
     });
 
-    sheet.querySelector('[data-share="email"]').addEventListener("click", () => {
+    sheet.querySelector('[data-share="email"]')?.addEventListener("click", () => {
       const url = `mailto:?subject=${encodeURIComponent(pacote.titulo)}&body=${encodeURIComponent(
         `${pacote.texto}\n\n(O PDF também pode ser baixado pelo botão Baixar PDF.)`
       )}`;
@@ -699,7 +718,7 @@ const SalvarVagas = {
       fechar();
     });
 
-    sheet.querySelector('[data-share="download"]').addEventListener("click", () => {
+    sheet.querySelector('[data-share="download"]')?.addEventListener("click", () => {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(pacote.blob);
       link.download = pacote.nomeArquivo;
@@ -747,7 +766,33 @@ const SalvarVagas = {
       if (!compartilhou) this.abrirMenuFallback(pacote);
     } catch (error) {
       console.error(error);
-      alert("Não foi possível gerar o PDF. Tente novamente.");
+      // Fallback: ainda permite imprimir / salvar PDF pelo navegador.
+      const unidades = this.obterUnidades(Array.isArray(vagas) ? vagas : []);
+      let totalVagas = 0;
+      (vagas || []).forEach((vaga) => {
+        totalVagas += this.qtde(vaga);
+      });
+      const html = this.montarDocumento({
+        municipio: municipioSel,
+        vagas: Array.isArray(vagas) ? vagas : [],
+        totalVagas,
+        totalPcd: 0,
+        unidades,
+      });
+      this.abrirMenuFallback({
+        municipio: municipioSel,
+        html,
+        texto: this.montarTextoResumo({
+          municipio: municipioSel,
+          vagas: Array.isArray(vagas) ? vagas : [],
+          totalVagas,
+          unidades,
+        }),
+        titulo: `Vagas de Emprego — ${municipioSel}`,
+        blob: null,
+        file: null,
+        nomeArquivo: `vagas-${this.slugMunicipio(municipioSel)}.pdf`,
+      });
     } finally {
       this.definirEstadoBotao(false);
     }
