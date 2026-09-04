@@ -872,6 +872,10 @@ const SalvarVagas = {
     return false;
   },
 
+  urlWhatsApp(texto) {
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+  },
+
   async compartilharWhatsApp(pacote) {
     const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
     const imagens = pacote.imagens || [];
@@ -888,10 +892,11 @@ const SalvarVagas = {
       link.download = imagens[0].name;
       link.click();
       setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    } else {
+    } else if (pacote.blob) {
       this.baixarPdf(pacote);
     }
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+
+    window.open(this.urlWhatsApp(texto), "_blank", "noopener,noreferrer");
     return true;
   },
 
@@ -899,7 +904,7 @@ const SalvarVagas = {
     const existente = document.getElementById("share-sheet");
     if (existente) existente.remove();
 
-    const temPdf = Boolean(pacote.blob);
+    const temArquivo = Boolean(pacote.blob || pacote.file || (pacote.imagens && pacote.imagens.length));
     const sheet = document.createElement("div");
     sheet.id = "share-sheet";
     sheet.className = "share-sheet";
@@ -907,12 +912,12 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Escolha como deseja compartilhar o PDF de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Escolha como deseja compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
         <div class="share-sheet__actions">
-          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>` : ""}
-          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>` : ""}
+          <button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>
+          <button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>
           <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir / Salvar PDF</button>
-          ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>` : ""}
+          ${temArquivo ? `<button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>` : ""}
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
@@ -923,12 +928,12 @@ const SalvarVagas = {
       el.addEventListener("click", fechar);
     });
 
-    sheet.querySelector('[data-share="whatsapp"]')?.addEventListener("click", async () => {
+    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
       fechar();
       await this.compartilharWhatsApp(pacote);
     });
 
-    sheet.querySelector('[data-share="email"]')?.addEventListener("click", () => {
+    sheet.querySelector('[data-share="email"]').addEventListener("click", () => {
       const url = `mailto:?subject=${encodeURIComponent(pacote.titulo || "")}&body=${encodeURIComponent(
         pacote.textoEmail || this.montarTextoEmail(pacote.municipio)
       )}`;
@@ -981,8 +986,7 @@ const SalvarVagas = {
     this.definirEstadoBotao(true);
     try {
       const pacote = await this.prepararPacote({ municipio: municipioSel, vagas });
-      const compartilhou = await this.compartilharNativo(pacote);
-      if (!compartilhou) this.abrirMenuFallback(pacote);
+      this.abrirMenuFallback(pacote);
     } catch (error) {
       console.error(error);
       // Fallback: ainda permite imprimir / salvar PDF pelo navegador.
