@@ -489,32 +489,18 @@ const SalvarVagas = {
 </html>`;
   },
 
-  montarTextoResumo({ municipio, vagas, totalVagas, unidades }) {
-    const linhas = [
-      `Vagas de Emprego — ${municipio}`,
-      `${vagas.length} oferta(s) | ${totalVagas} vaga(s)`,
-      `Gerado em ${this.dataHojeBR()}`,
-      "",
-    ];
+  montarTextoWhatsApp(municipio) {
+    const nome = String(municipio || "municipio").trim().replace(/\s+/g, "_");
+    return `vagas_${nome}\n${this.dataHojeBR()}`;
+  },
 
-    (unidades || []).forEach((u) => {
-      linhas.push(`Unidade: ${u.unidade}`);
-      linhas.push(`Responsável: ${u.responsavel}`);
-      linhas.push(`Contato: ${u.contato}`);
-      linhas.push("");
-    });
+  montarTextoEmail(municipio) {
+    return `Segue em anexo o PDF com as vagas formatadas.\n\n${this.montarTextoWhatsApp(municipio)}`;
+  },
 
-    vagas.slice(0, 20).forEach((vaga) => {
-      linhas.push(
-        `• ${vaga.ocupacao || "Vaga"} — ${this.qtde(vaga)} vaga(s) (${vaga.unidade || "sem unidade"})`
-      );
-    });
-
-    if (vagas.length > 20) {
-      linhas.push(`… e mais ${vagas.length - 20} oferta(s).`);
-    }
-
-    return linhas.join("\n");
+  nomeArquivoPdf(municipio) {
+    const nome = String(municipio || "municipio").trim().replace(/\s+/g, "_");
+    return `vagas_${nome}.pdf`;
   },
 
   abrirImpressao(html) {
@@ -805,13 +791,8 @@ const SalvarVagas = {
       unidades,
       logoSrc,
     });
-    const texto = this.montarTextoResumo({
-      municipio: municipioSel,
-      vagas: lista,
-      totalVagas,
-      unidades,
-    });
-    const nomeArquivo = `vagas-${this.slugMunicipio(municipioSel)}.pdf`;
+    const texto = this.montarTextoWhatsApp(municipioSel);
+    const nomeArquivo = this.nomeArquivoPdf(municipioSel);
     const blob = await this.gerarPdfBlob(html, nomeArquivo);
     const file = new File([blob], nomeArquivo, { type: "application/pdf" });
 
@@ -819,19 +800,30 @@ const SalvarVagas = {
       municipio: municipioSel,
       html,
       texto,
-      titulo: `Vagas de Emprego — ${municipioSel}`,
+      textoEmail: this.montarTextoEmail(municipioSel),
+      titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
       file,
       blob,
       nomeArquivo,
     };
   },
 
+  baixarPdf(pacote) {
+    if (!pacote?.blob) return;
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(pacote.blob);
+    link.download = pacote.nomeArquivo || "vagas.pdf";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  },
+
   async compartilharNativo(pacote) {
     if (!navigator.share || !pacote.file) return false;
 
+    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
     const payloadArquivo = {
-      title: pacote.titulo,
-      text: pacote.texto,
+      title: pacote.titulo || texto,
+      text: texto,
       files: [pacote.file],
     };
 
@@ -843,6 +835,32 @@ const SalvarVagas = {
       if (error && error.name === "AbortError") return true;
       return false;
     }
+  },
+
+  async compartilharWhatsApp(pacote) {
+    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
+
+    // Prioriza o PDF com cards + legenda curta no WhatsApp
+    if (pacote.file && navigator.share) {
+      try {
+        const payload = {
+          title: pacote.titulo || texto,
+          text: texto,
+          files: [pacote.file],
+        };
+        if (!navigator.canShare || navigator.canShare(payload)) {
+          await navigator.share(payload);
+          return true;
+        }
+      } catch (error) {
+        if (error && error.name === "AbortError") return true;
+      }
+    }
+
+    // Fallback: baixa o PDF (cards) e abre o WhatsApp só com vagas_município + data
+    this.baixarPdf(pacote);
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
+    return true;
   },
 
   abrirMenuFallback(pacote) {
@@ -857,7 +875,7 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Escolha como deseja compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Escolha como deseja compartilhar o PDF de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
         <div class="share-sheet__actions">
           ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>` : ""}
           ${temPdf ? `<button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>` : ""}
@@ -875,20 +893,12 @@ const SalvarVagas = {
 
     sheet.querySelector('[data-share="whatsapp"]')?.addEventListener("click", async () => {
       fechar();
-      const compartilhou = await this.compartilharNativo(pacote);
-      if (!compartilhou) {
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(pacote.blob);
-        link.download = pacote.nomeArquivo;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-        window.open(`https://wa.me/?text=${encodeURIComponent(pacote.texto)}`, "_blank", "noopener,noreferrer");
-      }
+      await this.compartilharWhatsApp(pacote);
     });
 
     sheet.querySelector('[data-share="email"]')?.addEventListener("click", () => {
-      const url = `mailto:?subject=${encodeURIComponent(pacote.titulo)}&body=${encodeURIComponent(
-        `${pacote.texto}\n\n(O PDF também pode ser baixado pelo botão Baixar PDF.)`
+      const url = `mailto:?subject=${encodeURIComponent(pacote.titulo || "")}&body=${encodeURIComponent(
+        pacote.textoEmail || this.montarTextoEmail(pacote.municipio)
       )}`;
       window.location.href = url;
       fechar();
@@ -900,11 +910,7 @@ const SalvarVagas = {
     });
 
     sheet.querySelector('[data-share="download"]')?.addEventListener("click", () => {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(pacote.blob);
-      link.download = pacote.nomeArquivo;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      this.baixarPdf(pacote);
       fechar();
     });
 
@@ -965,16 +971,12 @@ const SalvarVagas = {
       this.abrirMenuFallback({
         municipio: municipioSel,
         html,
-        texto: this.montarTextoResumo({
-          municipio: municipioSel,
-          vagas: Array.isArray(vagas) ? vagas : [],
-          totalVagas,
-          unidades,
-        }),
-        titulo: `Vagas de Emprego — ${municipioSel}`,
+        texto: this.montarTextoWhatsApp(municipioSel),
+        textoEmail: this.montarTextoEmail(municipioSel),
+        titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
         blob: null,
         file: null,
-        nomeArquivo: `vagas-${this.slugMunicipio(municipioSel)}.pdf`,
+        nomeArquivo: this.nomeArquivoPdf(municipioSel),
       });
     } finally {
       this.definirEstadoBotao(false);
