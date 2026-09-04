@@ -526,6 +526,86 @@ const SalvarVagas = {
     }
   },
 
+  limparResiduos() {
+    ["pdf-export-overlay", "pdf-export-host", "pdf-export-style", "share-sheet"].forEach((id) => {
+      document.getElementById(id)?.remove();
+    });
+    document.querySelectorAll(".html2pdf__container").forEach((el) => el.remove());
+  },
+
+  recarregarPagina() {
+    this.limparResiduos();
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  },
+
+  async gerarPdfDoHtml(html, nomeArquivo) {
+    await this.carregarHtml2Pdf();
+    this.limparResiduos();
+
+    const styleEl = document.createElement("style");
+    styleEl.id = "pdf-export-style";
+    styleEl.textContent = String(this.estilos() || "").replace(/@page\s*\{[\s\S]*?\}/g, "");
+    document.head.appendChild(styleEl);
+
+    const overlay = document.createElement("div");
+    overlay.id = "pdf-export-overlay";
+    overlay.style.cssText =
+      "position:fixed;inset:0;z-index:2147483646;background:rgba(255,255,255,0.94);display:flex;align-items:center;justify-content:center;";
+    overlay.innerHTML =
+      '<p style="margin:0;color:#003d68;font:800 1rem/1.3 Segoe UI,sans-serif;">Gerando documento...</p>';
+
+    const host = document.createElement("div");
+    host.id = "pdf-export-host";
+    host.style.cssText =
+      "position:fixed;left:0;top:0;width:794px;background:#ffffff;opacity:1;visibility:visible;z-index:2147483645;";
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const page = doc.querySelector(".print-page") || doc.body;
+    host.appendChild(page.cloneNode(true));
+    host.querySelectorAll("img").forEach((img) => {
+      const src = String(img.getAttribute("src") || "");
+      if (!src.startsWith("data:image")) img.remove();
+    });
+
+    document.body.appendChild(host);
+    document.body.appendChild(overlay);
+
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    try {
+      const blob = await window
+        .html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: nomeArquivo,
+          image: { type: "jpeg", quality: 0.92 },
+          html2canvas: {
+            scale: 1.2,
+            useCORS: false,
+            allowTaint: false,
+            backgroundColor: "#ffffff",
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: 794,
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        })
+        .from(host)
+        .outputPdf("blob");
+
+      if (!(blob instanceof Blob) || blob.size < 1500) {
+        throw new Error("PDF gerado está vazio.");
+      }
+      return blob;
+    } finally {
+      this.limparResiduos();
+    }
+  },
+
   carregarHtml2Pdf() {
     if (typeof window.html2pdf === "function") return Promise.resolve();
     if (this._html2pdfPromise) return this._html2pdfPromise;
@@ -818,8 +898,15 @@ const SalvarVagas = {
     });
     const texto = this.montarTextoWhatsApp(municipioSel);
     const nomeArquivo = this.nomeArquivoPdf(municipioSel);
-    const gerado = await this.gerarArquivos(html, nomeArquivo);
-    const file = new File([gerado.blob], nomeArquivo, { type: "application/pdf" });
+
+    let blob = null;
+    let file = null;
+    try {
+      blob = await this.gerarPdfDoHtml(html, nomeArquivo);
+      file = new File([blob], nomeArquivo, { type: "application/pdf" });
+    } catch (error) {
+      console.error(error);
+    }
 
     return {
       municipio: municipioSel,
@@ -828,83 +915,34 @@ const SalvarVagas = {
       textoEmail: this.montarTextoEmail(municipioSel),
       titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
       file,
-      blob: gerado.blob,
-      imagens: gerado.imagens || [],
+      blob,
+      imagens: [],
       nomeArquivo,
     };
   },
 
   baixarPdf(pacote) {
-    if (!pacote?.blob) return;
+    if (!pacote?.blob) {
+      this.abrirImpressao(pacote.html);
+      return;
+    }
     const link = document.createElement("a");
     link.href = URL.createObjectURL(pacote.blob);
     link.download = pacote.nomeArquivo || "vagas.pdf";
+    document.body.appendChild(link);
     link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  },
-
-  arquivosParaCompartilhar(pacote) {
-    if (pacote?.imagens?.length) return pacote.imagens;
-    if (pacote?.file) return [pacote.file];
-    return [];
-  },
-
-  async tentarShare(payload) {
-    if (!navigator.share) return false;
-    try {
-      if (navigator.canShare && !navigator.canShare(payload)) return false;
-      await navigator.share(payload);
-      return true;
-    } catch (error) {
-      if (error && error.name === "AbortError") return true;
-      return false;
-    }
-  },
-
-  async compartilharNativo(pacote) {
-    const arquivos = this.arquivosParaCompartilhar(pacote);
-    if (!arquivos.length) return false;
-    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
-
-    if (await this.tentarShare({ title: texto, text: texto, files: arquivos })) return true;
-    if (await this.tentarShare({ files: arquivos, text: texto })) return true;
-    if (await this.tentarShare({ files: arquivos })) return true;
-    return false;
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1500);
   },
 
   urlWhatsApp(texto) {
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
   },
 
-  async compartilharWhatsApp(pacote) {
-    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
-    const imagens = pacote.imagens || [];
-    const pdf = pacote.file ? [pacote.file] : [];
-
-    if (imagens.length && (await this.tentarShare({ files: imagens, text: texto }))) return true;
-    if (imagens.length && (await this.tentarShare({ files: imagens }))) return true;
-    if (pdf.length && (await this.tentarShare({ files: pdf, text: texto }))) return true;
-    if (pdf.length && (await this.tentarShare({ files: pdf }))) return true;
-
-    if (imagens[0]) {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(imagens[0]);
-      link.download = imagens[0].name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    } else if (pacote.blob) {
-      this.baixarPdf(pacote);
-    }
-
-    window.open(this.urlWhatsApp(texto), "_blank", "noopener,noreferrer");
-    return true;
-  },
-
-  abrirMenuFallback(pacote) {
+  abrirMenuCompartilhar(pacote) {
     const existente = document.getElementById("share-sheet");
     if (existente) existente.remove();
 
-    const temArquivo = Boolean(pacote.blob || pacote.file || (pacote.imagens && pacote.imagens.length));
     const sheet = document.createElement("div");
     sheet.id = "share-sheet";
     sheet.className = "share-sheet";
@@ -912,43 +950,49 @@ const SalvarVagas = {
       <div class="share-sheet__backdrop" data-share-close></div>
       <div class="share-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
         <h3 id="share-sheet-title">Compartilhar vagas</h3>
-        <p>Escolha como deseja compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
+        <p>Documento pronto. Escolha como compartilhar as vagas de <strong>${this.escapeHtml(pacote.municipio)}</strong>.</p>
         <div class="share-sheet__actions">
           <button type="button" class="share-sheet__btn share-sheet__btn--whatsapp" data-share="whatsapp">WhatsApp</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--email" data-share="email">E-mail</button>
-          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir / Salvar PDF</button>
-          ${temArquivo ? `<button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Baixar PDF</button>` : ""}
+          <button type="button" class="share-sheet__btn share-sheet__btn--print" data-share="print">Imprimir</button>
+          <button type="button" class="share-sheet__btn share-sheet__btn--download" data-share="download">Download</button>
         </div>
         <button type="button" class="share-sheet__close" data-share-close>Fechar</button>
       </div>
     `;
 
-    const fechar = () => sheet.remove();
+    const concluir = (acao) => {
+      try {
+        acao();
+      } finally {
+        sheet.remove();
+        this.recarregarPagina();
+      }
+    };
+
     sheet.querySelectorAll("[data-share-close]").forEach((el) => {
-      el.addEventListener("click", fechar);
+      el.addEventListener("click", () => {
+        sheet.remove();
+        this.recarregarPagina();
+      });
     });
 
-    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
-      fechar();
-      await this.compartilharWhatsApp(pacote);
-    });
-
-    sheet.querySelector('[data-share="email"]').addEventListener("click", () => {
-      const url = `mailto:?subject=${encodeURIComponent(pacote.titulo || "")}&body=${encodeURIComponent(
-        pacote.textoEmail || this.montarTextoEmail(pacote.municipio)
-      )}`;
-      window.location.href = url;
-      fechar();
+    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", () => {
+      concluir(() => {
+        this.baixarPdf(pacote);
+        window.open(
+          this.urlWhatsApp(pacote.texto || this.montarTextoWhatsApp(pacote.municipio)),
+          "_blank",
+          "noopener,noreferrer"
+        );
+      });
     });
 
     sheet.querySelector('[data-share="print"]').addEventListener("click", () => {
-      this.abrirImpressao(pacote.html);
-      fechar();
+      concluir(() => this.abrirImpressao(pacote.html));
     });
 
-    sheet.querySelector('[data-share="download"]')?.addEventListener("click", () => {
-      this.baixarPdf(pacote);
-      fechar();
+    sheet.querySelector('[data-share="download"]').addEventListener("click", () => {
+      concluir(() => this.baixarPdf(pacote));
     });
 
     document.body.appendChild(sheet);
@@ -959,7 +1003,7 @@ const SalvarVagas = {
     if (!botao) return;
     if (carregando) {
       botao.dataset.labelOriginal = botao.textContent;
-      botao.textContent = "Gerando PDF...";
+      botao.textContent = "Gerando documento...";
       botao.disabled = true;
       return;
     }
@@ -984,9 +1028,10 @@ const SalvarVagas = {
     }
 
     this.definirEstadoBotao(true);
+    this.limparResiduos();
     try {
       const pacote = await this.prepararPacote({ municipio: municipioSel, vagas });
-      this.abrirMenuFallback(pacote);
+      this.abrirMenuCompartilhar(pacote);
     } catch (error) {
       console.error(error);
       // Fallback: ainda permite imprimir / salvar PDF pelo navegador.
@@ -1004,7 +1049,7 @@ const SalvarVagas = {
         unidades,
         logoSrc,
       });
-      this.abrirMenuFallback({
+      this.abrirMenuCompartilhar({
         municipio: municipioSel,
         html,
         texto: this.montarTextoWhatsApp(municipioSel),
