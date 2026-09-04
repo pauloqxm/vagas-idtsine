@@ -570,58 +570,26 @@ const SalvarVagas = {
     );
   },
 
-  async gerarPdfBlob(html, nomeArquivo) {
-    await this.carregarHtml2Pdf();
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cssOriginal = doc.querySelector("style")?.textContent || "";
-    const mobile = this.ehMobile();
-    const scale = mobile ? 1.1 : 1.5;
-    const cardsPorPagina = mobile ? 6 : 12;
-
-    const cssEscopado = cssOriginal
+  cssCaptura() {
+    const css = String(this.estilos() || "")
       .replace(/@page\s*\{[\s\S]*?\}/g, "")
-      .replace(/(^|})\s*([^{}@/][^{]*)\{/g, (match, pre, seletor) => {
-        const sel = String(seletor || "").trim();
-        if (!sel || sel.startsWith("@") || sel.startsWith("from") || sel.startsWith("to")) {
-          return match;
-        }
-        const partes = sel
-          .split(",")
-          .map((s) => {
-            const t = s.trim();
-            if (t === "body" || t === "html") return "#pdf-export-host";
-            if (t.startsWith("#pdf-export-host")) return t;
-            return `#pdf-export-host ${t}`;
-          })
-          .join(", ");
-        return `${pre} ${partes} {`;
-      });
-
-    const styleEl = document.createElement("style");
-    styleEl.id = "pdf-export-style";
-    styleEl.textContent = `
-      #pdf-export-host {
+      .replace(/\bbody\b/g, ".pdf-page-chunk")
+      .replace(/\bhtml\b/g, ".pdf-page-chunk");
+    return `
+      .pdf-page-chunk {
         box-sizing: border-box;
         width: 794px;
-        max-width: 794px;
-        padding: 0;
-        margin: 0;
+        padding: 12px;
         background: #ffffff !important;
         color: #1f2a37;
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       }
-      #pdf-export-host *, #pdf-export-host *::before, #pdf-export-host *::after {
+      .pdf-page-chunk, .pdf-page-chunk * {
         box-sizing: border-box;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
-      #pdf-export-host .pdf-page-chunk {
-        width: 794px;
-        padding: 8px;
-        background: #fff;
-      }
-      #pdf-export-host .pdf-page-continue {
+      .pdf-page-continue {
         margin: 0 0 10px;
         padding: 6px 10px;
         border-radius: 8px;
@@ -630,17 +598,44 @@ const SalvarVagas = {
         font-size: 11px;
         font-weight: 800;
       }
-      ${cssEscopado}
+      ${css}
     `;
+  },
+
+  canvasParaJpeg(canvas, qualidade) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size > 500) resolve(blob);
+          else reject(new Error("Imagem da página ficou vazia."));
+        },
+        "image/jpeg",
+        qualidade
+      );
+    });
+  },
+
+  async gerarArquivos(html, nomeArquivo) {
+    await this.carregarHtml2Pdf();
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const mobile = this.ehMobile();
+    const scale = mobile ? 1.15 : 1.5;
+    const cardsPorPagina = mobile ? 6 : 10;
+    const cssPagina = this.cssCaptura();
+
+    const styleEl = document.createElement("style");
+    styleEl.id = "pdf-export-style";
+    styleEl.textContent = cssPagina;
     document.head.appendChild(styleEl);
 
     const overlay = document.createElement("div");
     overlay.id = "pdf-export-overlay";
     overlay.setAttribute("aria-hidden", "true");
     overlay.style.cssText =
-      "position:fixed;inset:0;z-index:2147483646;background:rgba(255,255,255,0.92);display:flex;align-items:center;justify-content:center;pointer-events:none;";
+      "position:fixed;inset:0;z-index:2147483646;background:rgba(255,255,255,0.94);display:flex;align-items:center;justify-content:center;pointer-events:none;";
     overlay.innerHTML =
-      '<p style="margin:0;color:#003d68;font:800 1rem/1.3 Segoe UI,sans-serif;">Gerando PDF...</p>';
+      '<p style="margin:0;color:#003d68;font:800 1rem/1.3 Segoe UI,sans-serif;">Gerando arquivo...</p>';
 
     const host = document.createElement("div");
     host.id = "pdf-export-host";
@@ -664,6 +659,10 @@ const SalvarVagas = {
     const montarChunk = (inicio, fim, primeira) => {
       const chunk = document.createElement("div");
       chunk.className = "pdf-page-chunk";
+      const estiloLocal = document.createElement("style");
+      estiloLocal.textContent = cssPagina;
+      chunk.appendChild(estiloLocal);
+
       if (primeira) {
         if (header) chunk.appendChild(header.cloneNode(true));
         if (summary) chunk.appendChild(summary.cloneNode(true));
@@ -717,35 +716,60 @@ const SalvarVagas = {
       )
     );
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     if (!String(host.textContent || "").trim()) {
       overlay.remove();
       host.remove();
       styleEl.remove();
-      throw new Error("Conteúdo do PDF está vazio.");
+      throw new Error("Conteúdo do arquivo está vazio.");
     }
 
-    const opcoes = {
-      margin: [10, 10, 10, 10],
-      filename: nomeArquivo,
-      image: { type: "jpeg", quality: mobile ? 0.92 : 0.98 },
-      html2canvas: {
-        scale,
-        useCORS: false,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: 794,
-      },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"] },
+    const html2canvasOpts = {
+      scale,
+      useCORS: false,
+      allowTaint: false,
+      logging: false,
+      backgroundColor: "#ffffff",
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 794,
     };
 
     try {
-      let worker = window.html2pdf().set(opcoes).from(chunks[0]).toPdf();
+      const imagens = [];
+      const baseNome = String(nomeArquivo || "vagas").replace(/\.pdf$/i, "");
+
+      for (let i = 0; i < chunks.length; i += 1) {
+        const canvas = await window
+          .html2pdf()
+          .set({
+            margin: 0,
+            html2canvas: html2canvasOpts,
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          })
+          .from(chunks[i])
+          .toCanvas()
+          .get("canvas");
+
+        const jpeg = await this.canvasParaJpeg(canvas, mobile ? 0.9 : 0.95);
+        imagens.push(
+          new File([jpeg], `${baseNome}_${i + 1}.jpg`, { type: "image/jpeg" })
+        );
+      }
+
+      let worker = window
+        .html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: nomeArquivo,
+          image: { type: "jpeg", quality: mobile ? 0.9 : 0.96 },
+          html2canvas: html2canvasOpts,
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(chunks[0])
+        .toPdf();
+
       for (let i = 1; i < chunks.length; i += 1) {
         worker = worker
           .get("pdf")
@@ -762,7 +786,8 @@ const SalvarVagas = {
       if (!(blob instanceof Blob) || blob.size < 1500) {
         throw new Error("PDF gerado está vazio ou inválido.");
       }
-      return blob;
+
+      return { blob, imagens };
     } finally {
       overlay.remove();
       host.remove();
@@ -793,8 +818,8 @@ const SalvarVagas = {
     });
     const texto = this.montarTextoWhatsApp(municipioSel);
     const nomeArquivo = this.nomeArquivoPdf(municipioSel);
-    const blob = await this.gerarPdfBlob(html, nomeArquivo);
-    const file = new File([blob], nomeArquivo, { type: "application/pdf" });
+    const gerado = await this.gerarArquivos(html, nomeArquivo);
+    const file = new File([gerado.blob], nomeArquivo, { type: "application/pdf" });
 
     return {
       municipio: municipioSel,
@@ -803,7 +828,8 @@ const SalvarVagas = {
       textoEmail: this.montarTextoEmail(municipioSel),
       titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
       file,
-      blob,
+      blob: gerado.blob,
+      imagens: gerado.imagens || [],
       nomeArquivo,
     };
   },
@@ -817,19 +843,17 @@ const SalvarVagas = {
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   },
 
-  async compartilharNativo(pacote) {
-    if (!navigator.share || !pacote.file) return false;
+  arquivosParaCompartilhar(pacote) {
+    if (pacote?.imagens?.length) return pacote.imagens;
+    if (pacote?.file) return [pacote.file];
+    return [];
+  },
 
-    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
-    const payloadArquivo = {
-      title: pacote.titulo || texto,
-      text: texto,
-      files: [pacote.file],
-    };
-
+  async tentarShare(payload) {
+    if (!navigator.share) return false;
     try {
-      if (navigator.canShare && !navigator.canShare(payloadArquivo)) return false;
-      await navigator.share(payloadArquivo);
+      if (navigator.canShare && !navigator.canShare(payload)) return false;
+      await navigator.share(payload);
       return true;
     } catch (error) {
       if (error && error.name === "AbortError") return true;
@@ -837,28 +861,36 @@ const SalvarVagas = {
     }
   },
 
-  async compartilharWhatsApp(pacote) {
+  async compartilharNativo(pacote) {
+    const arquivos = this.arquivosParaCompartilhar(pacote);
+    if (!arquivos.length) return false;
     const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
 
-    // Prioriza o PDF com cards + legenda curta no WhatsApp
-    if (pacote.file && navigator.share) {
-      try {
-        const payload = {
-          title: pacote.titulo || texto,
-          text: texto,
-          files: [pacote.file],
-        };
-        if (!navigator.canShare || navigator.canShare(payload)) {
-          await navigator.share(payload);
-          return true;
-        }
-      } catch (error) {
-        if (error && error.name === "AbortError") return true;
-      }
-    }
+    if (await this.tentarShare({ title: texto, text: texto, files: arquivos })) return true;
+    if (await this.tentarShare({ files: arquivos, text: texto })) return true;
+    if (await this.tentarShare({ files: arquivos })) return true;
+    return false;
+  },
 
-    // Fallback: baixa o PDF (cards) e abre o WhatsApp só com vagas_município + data
-    this.baixarPdf(pacote);
+  async compartilharWhatsApp(pacote) {
+    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
+    const imagens = pacote.imagens || [];
+    const pdf = pacote.file ? [pacote.file] : [];
+
+    if (imagens.length && (await this.tentarShare({ files: imagens, text: texto }))) return true;
+    if (imagens.length && (await this.tentarShare({ files: imagens }))) return true;
+    if (pdf.length && (await this.tentarShare({ files: pdf, text: texto }))) return true;
+    if (pdf.length && (await this.tentarShare({ files: pdf }))) return true;
+
+    if (imagens[0]) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(imagens[0]);
+      link.download = imagens[0].name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    } else {
+      this.baixarPdf(pacote);
+    }
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener,noreferrer");
     return true;
   },
