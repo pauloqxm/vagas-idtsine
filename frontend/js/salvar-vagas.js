@@ -18,6 +18,37 @@ const SalvarVagas = {
     return new Date().toLocaleDateString("pt-BR");
   },
 
+  async obterLogoSrc() {
+    if (this._logoDataUrl) return this._logoDataUrl;
+
+    const fontes = [
+      "img/logo-idt.png",
+      "https://www.idt.org.br/assets/img/logos/logo_grande.png",
+    ];
+
+    for (const src of fontes) {
+      try {
+        const res = await fetch(src);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (dataUrl.startsWith("data:image")) {
+          this._logoDataUrl = dataUrl;
+          return dataUrl;
+        }
+      } catch (_) {
+        /* tenta próxima fonte */
+      }
+    }
+
+    return "img/logo-idt.png";
+  },
+
   slugMunicipio(municipio) {
     return String(municipio || "municipio")
       .normalize("NFD")
@@ -168,18 +199,11 @@ const SalvarVagas = {
       }
 
       .print-logo {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 52px;
-        height: 42px;
-        padding: 0 10px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #00a859, #003d68);
-        color: #fff;
-        font-size: 16px;
-        font-weight: 900;
-        letter-spacing: 0.04em;
+        display: block;
+        height: 48px;
+        width: auto;
+        max-width: 160px;
+        object-fit: contain;
       }
 
       .print-header__title {
@@ -407,8 +431,11 @@ const SalvarVagas = {
     `;
   },
 
-  montarDocumento({ municipio, vagas, totalVagas, totalPcd, unidades }) {
+  montarDocumento({ municipio, vagas, totalVagas, totalPcd, unidades, logoSrc }) {
     const data = this.dataHojeBR();
+    const logo =
+      logoSrc ||
+      "https://www.idt.org.br/assets/img/logos/logo_grande.png";
     const cards =
       vagas.length > 0
         ? `<div class="print-grid">${vagas.map((vaga, i) => this.renderCard(vaga, i)).join("")}</div>`
@@ -426,7 +453,7 @@ const SalvarVagas = {
     <header class="print-header">
       <div class="print-header__top">
         <div class="print-header__brand">
-          <span class="print-logo" aria-label="IDT">IDT</span>
+          <img class="print-logo" src="${this.escapeHtml(logo)}" alt="IDT — Instituto de Desenvolvimento do Trabalho" />
           <h1 class="print-header__title">
             Vagas de Emprego
             <span>${this.escapeHtml(municipio)}</span>
@@ -617,10 +644,27 @@ const SalvarVagas = {
     if (page) host.appendChild(page.cloneNode(true));
     else host.appendChild(doc.body.cloneNode(true));
 
-    host.querySelectorAll("img").forEach((img) => img.remove());
+    host.querySelectorAll("img").forEach((img) => {
+      // Mantém apenas logos embutidos (data:) para evitar canvas tainted por CORS.
+      const src = String(img.getAttribute("src") || "");
+      if (!src.startsWith("data:image")) img.remove();
+    });
     document.body.appendChild(host);
     document.body.appendChild(overlay);
 
+    await Promise.all(
+      [...host.querySelectorAll("img")].map(
+        (img) =>
+          new Promise((resolve) => {
+            if (img.complete) {
+              resolve();
+              return;
+            }
+            img.addEventListener("load", resolve, { once: true });
+            img.addEventListener("error", resolve, { once: true });
+          })
+      )
+    );
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -678,12 +722,14 @@ const SalvarVagas = {
     });
 
     const unidades = this.obterUnidades(lista);
+    const logoSrc = await this.obterLogoSrc();
     const html = this.montarDocumento({
       municipio: municipioSel,
       vagas: lista,
       totalVagas,
       totalPcd,
       unidades,
+      logoSrc,
     });
     const texto = this.montarTextoResumo({
       municipio: municipioSel,
@@ -833,12 +879,14 @@ const SalvarVagas = {
       (vagas || []).forEach((vaga) => {
         totalVagas += this.qtde(vaga);
       });
+      const logoSrc = await this.obterLogoSrc();
       const html = this.montarDocumento({
         municipio: municipioSel,
         vagas: Array.isArray(vagas) ? vagas : [],
         totalVagas,
         totalPcd: 0,
         unidades,
+        logoSrc,
       });
       this.abrirMenuFallback({
         municipio: municipioSel,
