@@ -901,11 +901,20 @@ const SalvarVagas = {
 
     let blob = null;
     let file = null;
+    let imagens = [];
     try {
       blob = await this.gerarPdfDoHtml(html, nomeArquivo);
       file = new File([blob], nomeArquivo, { type: "application/pdf" });
     } catch (error) {
       console.error(error);
+      try {
+        const gerado = await this.gerarArquivos(html, nomeArquivo);
+        blob = gerado.blob;
+        imagens = gerado.imagens || [];
+        if (blob) file = new File([blob], nomeArquivo, { type: "application/pdf" });
+      } catch (erroArquivos) {
+        console.error(erroArquivos);
+      }
     }
 
     return {
@@ -916,23 +925,79 @@ const SalvarVagas = {
       titulo: this.montarTextoWhatsApp(municipioSel).split("\n")[0],
       file,
       blob,
-      imagens: [],
+      imagens,
       nomeArquivo,
     };
   },
 
-  baixarPdf(pacote) {
-    if (!pacote?.blob) {
-      this.abrirImpressao(pacote.html);
+  baixarArquivo(pacote) {
+    const arquivo = pacote?.file;
+    if (!arquivo) {
+      alert("Não foi possível gerar o PDF para download. Use Imprimir e salve como PDF.");
       return;
     }
+
+    const url = URL.createObjectURL(arquivo);
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(pacote.blob);
+    link.href = url;
     link.download = pacote.nomeArquivo || "vagas.pdf";
+    link.rel = "noopener";
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1500);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  },
+
+  async enviarWhatsApp(pacote) {
+    const texto = pacote.texto || this.montarTextoWhatsApp(pacote.municipio);
+    const arquivos =
+      pacote.imagens && pacote.imagens.length
+        ? pacote.imagens
+        : pacote.file
+          ? [pacote.file]
+          : [];
+
+    if (arquivos.length && navigator.share) {
+      const payload = { title: texto, text: texto, files: arquivos };
+      try {
+        if (!navigator.canShare || navigator.canShare(payload)) {
+          await navigator.share(payload);
+          return;
+        }
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+      try {
+        await navigator.share({ files: arquivos });
+        return;
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+    }
+
+    window.location.href = this.urlWhatsApp(texto);
+  },
+
+  async enviarDownload(pacote) {
+    const arquivo = pacote?.file;
+    if (!arquivo) {
+      alert("Não foi possível gerar o PDF para download. Use Imprimir e salve como PDF.");
+      return;
+    }
+
+    if (navigator.share && navigator.canShare) {
+      const payload = { files: [arquivo], title: pacote.nomeArquivo };
+      try {
+        if (navigator.canShare(payload)) {
+          await navigator.share(payload);
+          return;
+        }
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
+    }
+
+    this.baixarArquivo(pacote);
   },
 
   urlWhatsApp(texto) {
@@ -960,39 +1025,35 @@ const SalvarVagas = {
       </div>
     `;
 
-    const concluir = (acao) => {
-      try {
-        acao();
-      } finally {
-        sheet.remove();
-        this.recarregarPagina();
-      }
+    const fecharELimpar = () => {
+      sheet.remove();
+      this.limparResiduos();
+      this.definirEstadoBotao(false);
     };
 
     sheet.querySelectorAll("[data-share-close]").forEach((el) => {
-      el.addEventListener("click", () => {
-        sheet.remove();
-        this.recarregarPagina();
-      });
+      el.addEventListener("click", fecharELimpar);
     });
 
-    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", () => {
-      concluir(() => {
-        this.baixarPdf(pacote);
-        window.open(
-          this.urlWhatsApp(pacote.texto || this.montarTextoWhatsApp(pacote.municipio)),
-          "_blank",
-          "noopener,noreferrer"
-        );
-      });
+    sheet.querySelector('[data-share="whatsapp"]').addEventListener("click", async () => {
+      sheet.remove();
+      await this.enviarWhatsApp(pacote);
+      this.limparResiduos();
+      this.definirEstadoBotao(false);
     });
 
     sheet.querySelector('[data-share="print"]').addEventListener("click", () => {
-      concluir(() => this.abrirImpressao(pacote.html));
+      sheet.remove();
+      this.abrirImpressao(pacote.html);
+      this.limparResiduos();
+      this.definirEstadoBotao(false);
     });
 
-    sheet.querySelector('[data-share="download"]').addEventListener("click", () => {
-      concluir(() => this.baixarPdf(pacote));
+    sheet.querySelector('[data-share="download"]').addEventListener("click", async () => {
+      sheet.remove();
+      await this.enviarDownload(pacote);
+      this.limparResiduos();
+      this.definirEstadoBotao(false);
     });
 
     document.body.appendChild(sheet);
