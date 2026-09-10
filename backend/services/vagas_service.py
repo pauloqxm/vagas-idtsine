@@ -1,14 +1,23 @@
 import csv
 import io
 import logging
+import os
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 import requests
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+TZ_FORTALEZA = ZoneInfo("America/Fortaleza")
+API_URL_PADRAO = "https://sistemas2.idt.org.br/api_vagasimo/api/vagas"
 
 # ── URLs das planilhas publicadas ──────────────────────────────────────────────
 VAGAS_URL = (
@@ -89,6 +98,33 @@ def _email_da_coluna_tipo(tipo_raw: str) -> str:
     if "@" in tipo and "." in tipo.split("@")[-1]:
         return tipo
     return ""
+
+
+def _parse_bool(val: Any) -> bool:
+    if isinstance(val, bool):
+        return val
+    s = str(val or "").strip().lower()
+    return s in {"1", "true", "sim", "yes"}
+
+
+def _api_key() -> str:
+    return str(os.getenv("VAGAS_IMO_API_KEY") or "").strip()
+
+
+def _api_url() -> str:
+    return str(os.getenv("VAGAS_IMO_API_URL") or API_URL_PADRAO).strip()
+
+
+def _dias_historico() -> int:
+    try:
+        return max(1, min(31, int(os.getenv("VAGAS_IMO_DIAS_HISTORICO") or "7")))
+    except ValueError:
+        return 7
+
+
+def _datas_consulta() -> List[str]:
+    hoje = datetime.now(TZ_FORTALEZA).date()
+    return [(hoje - timedelta(days=i)).strftime("%d/%m/%Y") for i in range(_dias_historico())]
 
 
 # ── Fetch do Google Sheets ────────────────────────────────────────────────────
@@ -226,6 +262,106 @@ def _ler_sheets() -> tuple[List[Dict[str, Any]], str]:
     return vagas, ultima_atualizacao
 
 
+def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    ocupacao = _limpar_texto(item.get("descricaoVaga") or "")
+    if not ocupacao:
+        return None
+    try:
+        vaga_id = int(item.get("tbVagasId"))
+    except (TypeError, ValueError):
+        return None
+
+    posto = _limpar_texto(item.get("postoAtendimento") or "")
+    info = _load_unidades_coords().get(posto, {})
+    tel_unidade = info.get("telefone_unidade") or ""
+    cel_unidade = info.get("celular_responsavel") or ""
+    tel_vaga = _limpar_texto(item.get("telefone") or "")
+
+    return {
+        "id": vaga_id,
+        "identificacao_vagas": _limpar_texto(item.get("identificacaoVagas") or ""),
+        "data": _parse_data_iso(str(item.get("dataInclusao") or "")),
+        "data_disponibilidade": _parse_data_iso(str(item.get("dataDisponibilidade") or "")),
+        "ocupacao": ocupacao,
+        "codigo_cbo": _limpar_texto(item.get("codigo") or ""),
+        "qtde_vagas": _parse_int(item.get("quantidade") or "1"),
+        "pcd": _parse_bool(item.get("ehPcd")),
+        "unidade": _limpar_texto(item.get("descricaoUnidade") or "") or info.get("unidade", ""),
+        "posto_atendimento": posto,
+        "municipio": info.get("municipio", ""),
+        "latitude": info.get("latitude"),
+        "longitude": info.get("longitude"),
+        "empresa": _limpar_texto(item.get("nome") or ""),
+        "responsavel": _limpar_texto(item.get("responsavel") or "") or info.get("responsavel", ""),
+        "responsavel_unidade": info.get("responsavel", ""),
+        "telefone": tel_vaga or tel_unidade or cel_unidade,
+        "telefone_unidade": tel_unidade,
+        "celular_responsavel": cel_unidade,
+        "email_contato": info.get("email_responsavel") or "",
+        "endereco": info.get("endereco") or "",
+        "bairro": info.get("bairro") or "",
+        "tipo_contratacao": _limpar_texto(item.get("tipoVaga") or ""),
+        "observacao": _limpar_texto(item.get("observacao") or "") or None,
+    }
+
+
+def _extrair_lista_api(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for chave in ("vagas", "data", "itens", "items"):
+            bloco = payload.get(chave)
+            if isinstance(bloco, list):
+                return [item for item in bloco if isinstance(item, dict)]
+    return []
+
+
+def _buscar_vagas_api(data_br: str) -> List[Dict[str, Any]]:
+    resp = requests.get(
+        _api_url(),
+        params={"data": data_br},
+        headers={"x-api-key": _api_key(), "Accept": "application/json"},
+        timeout=FETCH_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return _extrair_lista_api(resp.json())
+
+
+def _ler_api() -> tuple[List[Dict[str, Any]], str]:
+    """Baixa vagas da API do IDT (hoje + histórico curto para dias ofertadas)."""
+    if not _api_key():
+        raise RuntimeError("VAGAS_IMO_API_KEY não configurada")
+
+    vagas: List[Dict[str, Any]] = []
+    ultima_disponibilidade: Optional[datetime] = None
+
+    for data_br in _datas_consulta():
+        try:
+            itens = _buscar_vagas_api(data_br)
+        except Exception as exc:
+            logger.warning("Falha ao buscar vagas da API em %s (%s).", data_br, exc)
+            continue
+        for item in itens:
+            disponibilidade = _parse_datetime_iso(str(item.get("dataDisponibilidade") or ""))
+            if disponibilidade and (
+                ultima_disponibilidade is None or disponibilidade > ultima_disponibilidade
+            ):
+                ultima_disponibilidade = disponibilidade
+            vaga = _item_api_para_vaga(item)
+            if vaga:
+                vagas.append(vaga)
+
+    if not vagas:
+        raise RuntimeError("API de vagas não retornou registros")
+
+    ultima_atualizacao = (
+        _formatar_data_br(ultima_disponibilidade)
+        if ultima_disponibilidade
+        else datetime.now(TZ_FORTALEZA).strftime("%d/%m/%Y")
+    )
+    return vagas, ultima_atualizacao
+
+
 def _enriquecer_dias_ofertadas(vagas: List[Dict[str, Any]]) -> None:
     datas_por_ident: Dict[str, set] = defaultdict(set)
 
@@ -280,18 +416,25 @@ def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
         return CACHE["data"]
 
     try:
-        vagas, ultima_atualizacao = _ler_sheets()
+        fonte = "API"
+        try:
+            vagas, ultima_atualizacao = _ler_api()
+        except Exception as api_exc:
+            logger.warning("Falha na API de vagas (%s). Tentando Google Sheets.", api_exc)
+            fonte = "Sheets"
+            vagas, ultima_atualizacao = _ler_sheets()
+
         _enriquecer_dias_ofertadas(vagas)
         vagas = _deduplicar_vagas(vagas)
 
         CACHE["data"] = vagas
         CACHE["ultima_atualizacao"] = ultima_atualizacao
         CACHE["timestamp"] = now
-        logger.info("Vagas carregadas do Sheets: %d registros únicos.", len(vagas))
+        logger.info("Vagas carregadas da %s: %d registros únicos.", fonte, len(vagas))
         return vagas
 
     except Exception as exc:
-        logger.error("Falha ao buscar vagas do Sheets (%s). Usando cache anterior.", exc)
+        logger.error("Falha ao buscar vagas (%s). Usando cache anterior.", exc)
         if CACHE["data"] is not None:
             return CACHE["data"]
         return []

@@ -1,6 +1,6 @@
 # Deploy — Portal público de vagas (IDT)
 
-Aplicação **FastAPI + Uvicorn** que serve o frontend estático e expõe APIs de vagas, unidades e mapa. Os dados vêm de **planilhas publicadas no Google Sheets** (CSV), com cache em memória no servidor.
+Aplicação **FastAPI + Uvicorn** que serve o frontend estático e expõe APIs de vagas, unidades e mapa. As vagas vêm da **API do IDT**; unidades/postos continuam na planilha publicada do Google Sheets. Cache em memória no servidor.
 
 ## Estrutura do projeto
 
@@ -27,14 +27,14 @@ vagas/
 
 ## Fonte de dados
 
-O backend busca as planilhas publicadas no Google Sheets:
+| Dado | Origem |
+|------|--------|
+| Vagas | API `https://sistemas2.idt.org.br/api_vagasimo/api/vagas` |
+| Unidades / postos | Planilha Google Sheets, gid `1623874059` |
 
-| Dado | Planilha |
-|------|----------|
-| Vagas | gid `187943237` |
-| Unidades / postos | gid `1623874059` |
+A chave da API fica na variável de ambiente `VAGAS_IMO_API_KEY` (header `x-api-key`). Se a API falhar ou a chave não estiver definida, o backend tenta a planilha de vagas como fallback.
 
-As URLs estão em `backend/services/vagas_service.py`. O servidor precisa de **acesso HTTPS de saída** para `docs.google.com`.
+O servidor precisa de **acesso HTTPS de saída** para `sistemas2.idt.org.br` e `docs.google.com`.
 
 **Cache em memória:** vagas (5 min), unidades (1 h). No startup, as vagas são pré-carregadas em background.
 
@@ -74,6 +74,7 @@ Inclua `ce_regioes.geojson` no repositório — o mapa usa `/api/geo/ce-regioes`
 3. Selecione o repositório
 4. Railway detecta o `Dockerfile` e faz o build
 5. Em **Settings** → **Networking** → **Generate Domain**
+6. Em **Variables**, crie `VAGAS_IMO_API_KEY` com a chave da API (não coloque a chave no Git)
 
 ### CLI
 
@@ -99,12 +100,15 @@ railway up
 | Variável | Padrão | Descrição |
 |----------|--------|-----------|
 | `PORT` | `8020` | Porta de escuta (definida pelo Railway em produção) |
+| `VAGAS_IMO_API_KEY` | — | Chave enviada no header `x-api-key` (obrigatória em produção) |
+| `VAGAS_IMO_API_URL` | URL da API de vagas | Só altere se o endereço da API mudar |
+| `VAGAS_IMO_DIAS_HISTORICO` | `7` | Quantos dias buscar para calcular “dias ofertadas” |
 
 ## Build local
 
 ```bash
 docker build -t portal-vagas .
-docker run -p 8020:8020 -e PORT=8020 portal-vagas
+docker run -p 8020:8020 -e PORT=8020 -e VAGAS_IMO_API_KEY="sua-chave" portal-vagas
 ```
 
 - http://localhost:8020/
@@ -128,8 +132,8 @@ http://127.0.0.1:8020/
 ### Sem vagas
 
 - Verifique `/api/vagas` (deve retornar `total > 0`)
-- Confirme que as planilhas estão publicadas na web como CSV
-- Veja os logs do container (erro ao buscar Google Sheets)
+- Confirme `VAGAS_IMO_API_KEY` nas variáveis do Railway
+- Veja os logs do container (erro ao buscar a API de vagas)
 - Chame `/api/vagas/refresh`
 
 ### Mapa sem unidades

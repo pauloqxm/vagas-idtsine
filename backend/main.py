@@ -35,7 +35,7 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 async def _warmup_cache():
-    """Pré-aquece o cache buscando as planilhas em background thread no startup."""
+    """Pré-aquece o cache de vagas (API IDT) em background no startup."""
     import asyncio
     await asyncio.to_thread(vagas_service.get_vagas)
 
