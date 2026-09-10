@@ -483,6 +483,7 @@ def get_postos_atendimento() -> Dict[str, Dict[str, Any]]:
             "municipio": info.get("municipio", ""),
             "responsavel": info.get("responsavel", ""),
             "telefone_unidade": info.get("telefone_unidade", ""),
+            "celular_responsavel": info.get("celular_responsavel", ""),
             "endereco": info.get("endereco", ""),
             "bairro": info.get("bairro", ""),
             "gestao": info.get("gestao", ""),

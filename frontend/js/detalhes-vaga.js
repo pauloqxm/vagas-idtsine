@@ -48,6 +48,7 @@ const DetalhesVaga = {
       ...vaga,
       responsavel_unidade: posto.responsavel || vaga.responsavel_unidade || "",
       telefone_unidade: posto.telefone_unidade || vaga.telefone_unidade || "",
+      celular_responsavel: posto.celular_responsavel || vaga.celular_responsavel || "",
       endereco: posto.endereco || vaga.endereco || "",
       bairro: posto.bairro || vaga.bairro || "",
       municipio: posto.municipio || vaga.municipio || "",
@@ -134,7 +135,7 @@ const DetalhesVaga = {
     const sm = compact ? " btn-sm" : "";
     return `
       <span class="agendar-wrap">
-        <button type="button" class="btn btn-agendar${sm}" data-agendar="${this.escapeAttr(vaga.posto_atendimento || "")}" data-gestao="${this.escapeAttr(vaga.gestao || "")}" data-telefone="${this.escapeAttr(vaga.telefone_unidade || "")}">Agendamento</button>
+        <button type="button" class="btn btn-agendar${sm}" data-agendar="${this.escapeAttr(vaga.posto_atendimento || "")}" data-gestao="${this.escapeAttr(vaga.gestao || "")}" data-telefone="${this.escapeAttr(vaga.telefone_unidade || "")}" data-celular="${this.escapeAttr(vaga.celular_responsavel || "")}">Agendamento</button>
         <button type="button" class="agendar-info" data-agendar-info aria-label="Informação sobre o agendamento" title="Informação sobre o agendamento">i</button>
       </span>
     `;
@@ -163,6 +164,10 @@ const DetalhesVaga = {
     const telefone = String(
       posto.telefone_unidade || vaga?.telefone_unidade || botao?.dataset?.telefone || ""
     ).trim();
+    const celular = String(
+      posto.celular_responsavel || vaga?.celular_responsavel || botao?.dataset?.celular || ""
+    ).trim();
+    const numero = telefone || celular || "não informado";
 
     if (gestao === "idt") {
       window.open(this.urlAgendamentoIdt, "_blank", "noopener");
@@ -173,7 +178,6 @@ const DetalhesVaga = {
       return;
     }
 
-    const numero = telefone || "não informado";
     this.abrirDialogo(
       "Agendamento",
       `Esta unidade não possui agendamento entre em contato pelo numero ${numero}`
