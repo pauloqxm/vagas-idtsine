@@ -37,6 +37,7 @@ const MAP_STYLE = {
 };
 
 let map = null;
+let geolocateControl = null;
 let vagasGeojson = null;
 let unidadesGeojson = null;
 let popup = null;
@@ -585,10 +586,7 @@ async function adicionarUnidades() {
       (feature.properties && feature.properties.unidade) || "",
       codigoPosto(feature.properties)
     );
-    popup
-      .setLngLat(feature.geometry.coordinates)
-      .setHTML(buildUnidadePopupHtml(feature.properties, feature.geometry.coordinates))
-      .addTo(map);
+    abrirPopupUnidade(feature);
   });
 }
 
@@ -650,6 +648,7 @@ function focarVagaDaUrl() {
     .setLngLat(feature.geometry.coordinates)
     .setHTML(buildVagaPopupHtml(feature.properties))
     .addTo(map);
+  ligarAcoesPopup(dadosAgendamentoDeProps(feature.properties), "vaga");
   return true;
 }
 
@@ -692,60 +691,118 @@ function configurarFiltros() {
   }
 }
 
+function dadosAgendamentoDeProps(props) {
+  return {
+    posto_atendimento: codigoPosto(props),
+    gestao: (props && props.gestao) || "",
+    telefone_unidade: (props && props.telefone_unidade) || "",
+    celular_responsavel: (props && props.celular_responsavel) || "",
+  };
+}
+
+function htmlAgendamentoPopup(props) {
+  if (typeof DetalhesVaga === "undefined") return "";
+  return DetalhesVaga.htmlAgendamento(dadosAgendamentoDeProps(props));
+}
+
+function htmlLinhaPopup(rotulo, valorHtml) {
+  return `<div class="popup-row"><span>${escapeHtml(rotulo)}</span><strong>${valorHtml}</strong></div>`;
+}
+
+function htmlTelefonePopup(valor) {
+  const texto = String(valor || "").trim();
+  if (!texto) return escapeHtml("Não informado");
+  const href = `tel:${texto.replace(/[^\d+]/g, "")}`;
+  return `<a href="${escapeAttr(href)}">${escapeHtml(texto)}</a>`;
+}
+
+function htmlBotaoRota(props, coords) {
+  const destino = montarDestinoRota(props, coords);
+  if (!destino) return "";
+  const lat = coords && coords.length >= 2 ? coords[1] : "";
+  const lng = coords && coords.length >= 2 ? coords[0] : "";
+  return `<button type="button" class="map-popup-btn map-popup-btn-route" data-abrir-rota data-lat="${escapeAttr(lat)}" data-lng="${escapeAttr(lng)}" data-label="${escapeAttr(props.unidade || "")}" data-address="${escapeAttr(destino)}">Traçar rota</button>`;
+}
+
+function abrirPopupUnidade(feature) {
+  const props = feature.properties || {};
+  popup
+    .setLngLat(feature.geometry.coordinates)
+    .setHTML(buildUnidadePopupHtml(props, feature.geometry.coordinates))
+    .addTo(map);
+  ligarAcoesPopup(dadosAgendamentoDeProps(props), "unidade");
+}
+
+function ligarAcoesPopup(dadosAgendamento, tipo) {
+  const el = popup && popup.getElement();
+  if (!el) return;
+  el.classList.remove("map-popup--unidade", "map-popup--vaga");
+  if (tipo) el.classList.add(`map-popup--${tipo}`);
+  if (typeof DetalhesVaga !== "undefined") {
+    DetalhesVaga.ligarAgendamento(el, dadosAgendamento);
+  }
+  el.querySelector("[data-abrir-rota]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const btn = event.currentTarget;
+    abrirSeletorRota({
+      lat: Number(btn.dataset.lat),
+      lng: Number(btn.dataset.lng),
+      label: btn.dataset.label || "",
+      address: btn.dataset.address || "",
+    });
+  });
+}
+
 function buildVagaPopupHtml(props) {
   const telefone =
     String(props.telefone_unidade || "").trim() ||
     String(props.celular_responsavel || "").trim() ||
     String(props.telefone || "").trim();
   const email = String(props.email_contato || "").trim();
+  const emailHtml = email
+    ? `<a href="mailto:${escapeAttr(email)}">${escapeHtml(email)}</a>`
+    : escapeHtml("Não informado");
   return `
     <div class="popup-rich popup-rich--vaga">
       <h4>${escapeHtml(props.ocupacao || "Vaga")}</h4>
-      <table class="popup-kv">
-        <tbody>
-          <tr><td>Vagas</td><td>${Number(props.qtde_vagas) || 1}</td></tr>
-          <tr><td>Município</td><td>${escapeHtml(props.municipio || "Não informado")}</td></tr>
-          <tr><td>Unidade</td><td>${escapeHtml(props.unidade || "Não informado")}</td></tr>
-          <tr><td>PCD</td><td>${props.pcd === true || props.pcd === "true" ? "Sim" : "Não"}</td></tr>
-          <tr><td>Telefone</td><td>${escapeHtml(telefone || "Não informado")}</td></tr>
-          <tr><td>E-mail</td><td>${escapeHtml(email || "Não informado")}</td></tr>
-        </tbody>
-      </table>
+      <div class="popup-kv">
+        ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
+        ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
+        ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
+        ${htmlLinhaPopup("PCD", escapeHtml(props.pcd === true || props.pcd === "true" ? "Sim" : "Não"))}
+        ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
+        ${htmlLinhaPopup("E-mail", emailHtml)}
+      </div>
+      <div class="popup-actions">
+        ${htmlAgendamentoPopup(props)}
+      </div>
     </div>
   `;
 }
 
 function buildUnidadePopupHtml(props, coords) {
-  const destino = montarDestinoGoogleMaps(props, coords);
-  const rota = destino
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`
-    : "";
   const telefone = String(props.telefone_unidade || "").trim();
   const celular = String(props.celular_responsavel || "").trim();
   return `
     <div class="popup-rich popup-rich--unidade">
       <h4>${escapeHtml(props.unidade || "Unidade IDT")}</h4>
-      <table class="popup-kv">
-        <tbody>
-          <tr><td>Município</td><td>${escapeHtml(props.municipio || "Não informado")}</td></tr>
-          <tr><td>Vagas recentes</td><td>${Number(props.ofertas_data_recente) || 0}</td></tr>
-          <tr><td>Endereço</td><td>${escapeHtml(props.endereco || "Não informado")}</td></tr>
-          <tr><td>Telefone</td><td>${escapeHtml(telefone || "Não informado")}</td></tr>
-          <tr><td>Celular</td><td>${escapeHtml(celular || "Não informado")}</td></tr>
-        </tbody>
-      </table>
-      ${
-        rota
-          ? `<div class="popup-actions">
-        <a class="map-popup-btn map-popup-btn-route" href="${escapeAttr(rota)}" target="_blank" rel="noopener noreferrer">Traçar rota</a>
-      </div>`
-          : ""
-      }
+      <div class="popup-kv">
+        ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
+        ${htmlLinhaPopup("Vagas recentes", escapeHtml(String(Number(props.ofertas_data_recente) || 0)))}
+        ${htmlLinhaPopup("Endereço", escapeHtml(props.endereco || "Não informado"))}
+        ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
+        ${htmlLinhaPopup("Celular", htmlTelefonePopup(celular))}
+      </div>
+      <div class="popup-actions">
+        ${htmlAgendamentoPopup(props)}
+        ${htmlBotaoRota(props, coords)}
+      </div>
     </div>
   `;
 }
 
-function montarDestinoGoogleMaps(props, coords) {
+function montarDestinoRota(props, coords) {
   const partes = [];
   if (props.endereco) partes.push(props.endereco);
   if (props.municipio) partes.push(props.municipio);
@@ -753,6 +810,70 @@ function montarDestinoGoogleMaps(props, coords) {
   if (partes.length) return partes.join(", ");
   if (coords && coords.length >= 2) return `${coords[1]},${coords[0]}`;
   return "";
+}
+
+function urlsRota({ lat, lng, label, address }) {
+  const temCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const destinoCoords = temCoords ? `${lat},${lng}` : "";
+  const destinoTexto = address || label || destinoCoords;
+  const q = encodeURIComponent(destinoTexto);
+  const destGoogle = encodeURIComponent(destinoCoords || destinoTexto);
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${destGoogle}&travelmode=driving`,
+    waze: temCoords
+      ? `https://waze.com/ul?ll=${destinoCoords}&navigate=yes&q=${q}`
+      : `https://waze.com/ul?q=${q}&navigate=yes`,
+    apple: temCoords
+      ? `https://maps.apple.com/?daddr=${destinoCoords}&q=${q}&dirflg=d`
+      : `https://maps.apple.com/?daddr=${q}&dirflg=d`,
+    geo: temCoords
+      ? `geo:${destinoCoords}?q=${destinoCoords}(${q})`
+      : `geo:0,0?q=${q}`,
+  };
+}
+
+function abrirSeletorRota(destino) {
+  document.getElementById("rota-dialog")?.remove();
+  const urls = urlsRota(destino);
+  const android = /Android/i.test(navigator.userAgent || "");
+  const dialog = document.createElement("div");
+  dialog.id = "rota-dialog";
+  dialog.className = "rota-dialog";
+  dialog.innerHTML = `
+    <div class="rota-dialog__backdrop" data-rota-close></div>
+    <div class="rota-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="rota-dialog-titulo">
+      <h3 id="rota-dialog-titulo">Traçar rota</h3>
+      <p>Escolha o aplicativo de mapas de sua preferência.</p>
+      <div class="rota-dialog__apps">
+        <a class="rota-app-btn" href="${escapeAttr(urls.google)}" target="_blank" rel="noopener noreferrer">Google Maps</a>
+        <a class="rota-app-btn" href="${escapeAttr(urls.waze)}" target="_blank" rel="noopener noreferrer">Waze</a>
+        <a class="rota-app-btn" href="${escapeAttr(urls.apple)}" target="_blank" rel="noopener noreferrer">Apple Maps</a>
+        ${
+          android
+            ? `<a class="rota-app-btn rota-app-btn--alt" href="${escapeAttr(urls.geo)}">Outros apps do aparelho</a>`
+            : ""
+        }
+      </div>
+      <button type="button" class="btn btn-light" data-rota-close>Cancelar</button>
+    </div>
+  `;
+  const fechar = () => {
+    dialog.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (event) => {
+    if (event.key === "Escape") fechar();
+  };
+  dialog.querySelectorAll("[data-rota-close]").forEach((el) => {
+    el.addEventListener("click", fechar);
+  });
+  dialog.querySelectorAll(".rota-app-btn").forEach((el) => {
+    el.addEventListener("click", () => {
+      window.setTimeout(fechar, 400);
+    });
+  });
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(dialog);
 }
 
 function escapeHtml(valor) {
@@ -768,6 +889,71 @@ function escapeAttr(valor) {
     .replace(/</g, "&lt;");
 }
 
+function isMobileMapa() {
+  return (
+    window.matchMedia("(max-width: 860px)").matches ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+  );
+}
+
+function configurarLocalizacao() {
+  if (!map || typeof maplibregl === "undefined") return;
+
+  geolocateControl = new maplibregl.GeolocateControl({
+    positionOptions: {
+      enableHighAccuracy: true,
+      timeout: 15000,
+    },
+    trackUserLocation: true,
+    showUserHeading: true,
+    showAccuracyCircle: true,
+    fitBoundsOptions: {
+      maxZoom: 14,
+      padding: 48,
+    },
+  });
+  map.addControl(geolocateControl, "top-right");
+
+  const btn = document.getElementById("map-locate-btn");
+  const atualizarBotaoLocalizacao = () => {
+    if (!btn) return;
+    btn.hidden = !isMobileMapa();
+  };
+  atualizarBotaoLocalizacao();
+  if (btn) {
+    btn.addEventListener("click", () => {
+      if (!window.isSecureContext) {
+        alert("A localização só funciona em conexão segura (HTTPS).");
+        return;
+      }
+      if (!navigator.geolocation) {
+        alert("Este aparelho não informa a localização.");
+        return;
+      }
+      geolocateControl.trigger();
+    });
+  }
+
+  geolocateControl.on("geolocate", () => {
+    if (!btn) return;
+    btn.hidden = !isMobileMapa();
+    btn.textContent = "Centralizar em mim";
+    btn.setAttribute("aria-label", "Centralizar o mapa na minha localização");
+    btn.classList.add("is-active");
+  });
+
+  geolocateControl.on("error", (error) => {
+    const negado = error && (error.code === 1 || error.message === "Geolocation permission denied.");
+    alert(
+      negado
+        ? "Permita o acesso à localização no navegador para ver sua posição no mapa."
+        : "Não foi possível obter sua localização. Tente novamente."
+    );
+  });
+
+  window.addEventListener("resize", atualizarBotaoLocalizacao);
+}
+
 async function initMapa() {
   if (typeof maplibregl === "undefined") {
     setStatus("Não foi possível carregar o mapa.");
@@ -781,7 +967,12 @@ async function initMapa() {
     zoom: 6,
   });
 
-  popup = new maplibregl.Popup({ closeButton: true, maxWidth: "340px" });
+  popup = new maplibregl.Popup({
+    closeButton: true,
+    maxWidth: "380px",
+    className: "map-popup",
+    offset: 16,
+  });
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   map.addControl(createCearaExtentControl(), "top-right");
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 100 }), "bottom-left");
@@ -791,6 +982,7 @@ async function initMapa() {
     }),
     "top-right"
   );
+  configurarLocalizacao();
 
   map.on("load", async () => {
     setStatus("Carregando camadas do mapa...");
