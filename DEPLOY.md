@@ -30,7 +30,7 @@ vagas/
 | Dado | Origem |
 |------|--------|
 | Vagas | API `https://sistemas2.idt.org.br/api_vagasimo/api/vagas` |
-| Unidades / postos | Planilha Google Sheets, gid `1623874059` |
+| Unidades / postos | Planilha [Portal Vagas - Unidades](https://docs.google.com/spreadsheets/d/e/2PACX-1vRkXWpPLWz8y7sC2h_CCXx09uY9E9-pvNM0JkUeMf0ijh1xgcpFKgZxTJDBrncc_KngpoiAT3WTZAZB/pub?gid=0), gid `0` |
 
 A chave da API fica na variável de ambiente `VAGAS_IMO_API_KEY` (header `x-api-key`). As vagas vêm só da API: chave inválida ou API fora do ar não carrega a lista. A planilha de unidades continua em uso para município, endereço e mapa.
 

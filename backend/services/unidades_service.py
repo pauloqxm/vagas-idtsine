@@ -73,6 +73,7 @@ def get_unidades() -> List[Dict[str, Any]]:
             "celular_responsavel": info.get("celular_responsavel", ""),
             "email_responsavel": info.get("email_responsavel", ""),
             "tipo_posto": info.get("tipo_posto", ""),
+            "gestao": info.get("gestao", ""),
             "bairro": info.get("bairro", ""),
             "endereco": info.get("endereco", ""),
             "latitude": lat,

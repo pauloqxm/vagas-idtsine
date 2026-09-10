@@ -3,6 +3,7 @@ import io
 import logging
 import os
 import time
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,8 +28,8 @@ VAGAS_URL = (
 )
 UNIDADES_URL = (
     "https://docs.google.com/spreadsheets/d/e/"
-    "2PACX-1vTacve5zthkiBQF6w7FE5h6vt0Lx8OXO_h7ncFSA8-POp9cbutk2DzSwzUdugcrk-fmTbm0drugSTGg"
-    "/pub?gid=1623874059&single=true&output=csv"
+    "2PACX-1vRkXWpPLWz8y7sC2h_CCXx09uY9E9-pvNM0JkUeMf0ijh1xgcpFKgZxTJDBrncc_KngpoiAT3WTZAZB"
+    "/pub?gid=0&single=true&output=csv"
 )
 
 FETCH_TIMEOUT = 90        # segundos para timeout do Google Sheets
@@ -140,6 +141,24 @@ def _fetch_csv_reader(url: str) -> csv.reader:
 
 # ── Unidades ──────────────────────────────────────────────────────────────────
 
+def _chave_coluna(val: str) -> str:
+    s = unicodedata.normalize("NFD", str(val or ""))
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    return " ".join(s.lower().replace("_", " ").split())
+
+
+def _indices_colunas(header: List[str]) -> Dict[str, int]:
+    return {_chave_coluna(nome): i for i, nome in enumerate(header)}
+
+
+def _celula(row: List[str], cols: Dict[str, int], *nomes: str) -> str:
+    for nome in nomes:
+        idx = cols.get(_chave_coluna(nome))
+        if idx is not None and idx < len(row):
+            return str(row[idx] or "").strip()
+    return ""
+
+
 def _load_unidades_coords() -> Dict[str, Dict[str, Any]]:
     """Lê unidades do Google Sheets com cache de 1 h.
     Em caso de falha usa o cache anterior (mesmo que expirado).
@@ -152,27 +171,31 @@ def _load_unidades_coords() -> Dict[str, Dict[str, Any]]:
 
     try:
         reader = _fetch_csv_reader(UNIDADES_URL)
-        next(reader, None)  # cabeçalho
+        header = next(reader, None) or []
+        cols = _indices_colunas(list(header))
 
         result: Dict[str, Dict[str, Any]] = {}
         for row in reader:
-            if len(row) < 11:
+            if not row or not any((c or "").strip() for c in row):
                 continue
-            codigo = str(row[0] or "").strip()
+            codigo = _celula(row, cols, "posto_atendimento", "posto atendimento")
             if not codigo:
                 continue
+            tipo_ou_email = _celula(row, cols, "tipo", "email")
+            email = _email_da_coluna_tipo(tipo_ou_email)
             result[codigo] = {
-                "municipio": str(row[1] or "").strip(),
-                "unidade": str(row[2] or "").strip(),
-                "responsavel": _limpar_texto(row[3] or ""),
-                "telefone_unidade": _limpar_texto(row[4] or ""),
-                "celular_responsavel": _limpar_texto(row[5] or ""),
-                "email_responsavel": _email_da_coluna_tipo(row[6] or ""),
-                "tipo_posto": "" if _email_da_coluna_tipo(row[6] or "") else _limpar_texto(row[6] or ""),
-                "bairro": _limpar_texto(row[7] or ""),
-                "endereco": _limpar_texto(row[8] or ""),
-                "latitude": _parse_float_br(row[9] or ""),
-                "longitude": _parse_float_br(row[10] or ""),
+                "municipio": _celula(row, cols, "municipio"),
+                "unidade": _celula(row, cols, "posto", "unidade"),
+                "responsavel": _limpar_texto(_celula(row, cols, "responsavel atual", "responsavel")),
+                "telefone_unidade": _limpar_texto(_celula(row, cols, "telefone da unidade", "telefone")),
+                "celular_responsavel": _limpar_texto(_celula(row, cols, "celular do responsavel", "celular")),
+                "email_responsavel": email,
+                "tipo_posto": "" if email else _limpar_texto(tipo_ou_email),
+                "bairro": _limpar_texto(_celula(row, cols, "bairro")),
+                "endereco": _limpar_texto(_celula(row, cols, "endereco")),
+                "latitude": _parse_float_br(_celula(row, cols, "latitude")),
+                "longitude": _parse_float_br(_celula(row, cols, "longitude")),
+                "gestao": _limpar_texto(_celula(row, cols, "gestao")),
             }
 
         _UNIDADES_CACHE["data"] = result
