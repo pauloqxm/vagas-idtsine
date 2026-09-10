@@ -222,15 +222,10 @@ input {
   display: block;
 }
 
-.logo--idt img {
-  width: 150px;
-  max-width: 38vw;
-}
-
-.logo--gov img {
+.logo--lockup img {
   height: 56px;
   width: auto;
-  max-width: min(90px, 22vw);
+  max-width: min(280px, 48vw);
 }
 
 .eyebrow {
@@ -1938,13 +1933,9 @@ h1 {
     padding: 0.75rem 0;
   }
 
-  .logo--idt img {
-    width: 112px;
-  }
-
-  .logo--gov img {
+  .logo--lockup img {
     height: 44px;
-    max-width: 72px;
+    max-width: min(220px, 52vw);
   }
 
   .site-search {
