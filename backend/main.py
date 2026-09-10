@@ -46,7 +46,11 @@ def ce_regioes_geojson():
         raise HTTPException(
             status_code=404, detail="Arquivo ce_regioes.geojson não encontrado"
         )
-    return FileResponse(GEOJSON_PATH, media_type="application/geo+json")
+    return FileResponse(
+        GEOJSON_PATH,
+        media_type="application/geo+json",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

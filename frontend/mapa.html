@@ -6,7 +6,11 @@
   <meta name="description" content="Veja as vagas de emprego do IDT no mapa do Ceará." />
   <title>Mapa de Vagas | IDT</title>
   <link rel="icon" href="https://www.idt.org.br/assets/img/icones/IDT.ico" type="image/x-icon" />
-  <link href="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin />
+  <link rel="dns-prefetch" href="https://b.basemaps.cartocdn.com" />
+  <link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com" />
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="map-page">
@@ -87,12 +91,15 @@
       <button id="map-filter-clear" type="button" class="btn btn-light">Limpar filtros</button>
     </section>
 
+    <div class="container map-locate-bar">
+      <button type="button" id="map-locate-btn" class="map-locate-btn" aria-label="Ativar minha localização no mapa">
+        Ativar minha localização
+      </button>
+    </div>
+
     <section class="container">
       <div id="mapa-container" class="map-layout public-map-layout">
         <div id="map-main"></div>
-        <button type="button" id="map-locate-btn" class="map-locate-btn" hidden aria-label="Ativar minha localização no mapa">
-          Ativar minha localização
-        </button>
       </div>
       <div id="map-results" class="map-results" aria-live="polite">
         Selecione uma unidade ou município para ver a quantidade de vagas.
@@ -118,6 +125,14 @@
       </section>
     </section>
   </main>
+
+  <div id="map-feature-popup" class="map-feature-popup hidden" role="dialog" aria-modal="true" aria-labelledby="map-popup-titulo">
+    <div class="map-feature-popup__backdrop" data-map-popup-close></div>
+    <div class="map-feature-popup__panel">
+      <button type="button" class="map-feature-popup__close" data-map-popup-close aria-label="Fechar">×</button>
+      <div id="map-feature-popup-body"></div>
+    </div>
+  </div>
 
   <div id="modal-vaga" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
     <div class="modal__backdrop"></div>
@@ -149,7 +164,7 @@
     </div>
   </footer>
 
-  <script src="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
   <script src="js/detalhes-vaga.js" defer></script>
   <script src="js/mapa.js" defer></script>
 </body>

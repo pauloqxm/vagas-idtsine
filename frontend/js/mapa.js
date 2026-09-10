@@ -8,21 +8,21 @@ const CE_REGIOES_FILL = "layer-ce-regioes-fill";
 const CE_REGIOES_LINE = "layer-ce-regioes-line";
 const UNIDADES_SOURCE = "source-unidades";
 const UNIDADES_LAYER = "layer-unidades";
-const PINO_UNIDADE_URL = "https://i.ibb.co/N6jfVtjN/pino-unidade.png";
+const PINO_UNIDADE_URL = "img/pino-unidade.svg";
 const PINO_UNIDADE_IMAGE_ID = "pino-unidade-idt";
 const MAP_STYLE = {
   version: 8,
-  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
     osm: {
       type: "raster",
       tiles: [
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     },
   },
   layers: [
@@ -40,7 +40,6 @@ let map = null;
 let geolocateControl = null;
 let vagasGeojson = null;
 let unidadesGeojson = null;
-let popup = null;
 let dataMaisRecente = null;
 const filtros = {
   unidade: "",
@@ -211,6 +210,30 @@ async function carregarJson(url, fallback) {
     console.warn(error);
     return fallback;
   }
+}
+
+function prefetchDadosMapa() {
+  return Promise.all([
+    carregarJson("/api/geo/ce-regioes", { type: "FeatureCollection", features: [] }),
+    carregarJson("/api/geo/regioes-paleta", { regioes: [], cores: {} }),
+    carregarJson("/api/unidades/geojson", {
+      type: "FeatureCollection",
+      features: [],
+    }),
+    carregarJson("/api/vagas/geojson", {
+      type: "FeatureCollection",
+      features: [],
+    }),
+  ]);
+}
+
+function prefetchImagemUnidade() {
+  return new Promise((resolve) => {
+    const im = new Image();
+    im.onload = () => resolve(im);
+    im.onerror = () => resolve(null);
+    im.src = PINO_UNIDADE_URL;
+  });
 }
 
 function valoresUnicosDasVagas(campo) {
@@ -466,16 +489,11 @@ function limparSelecaoMapa() {
   const municipio = document.getElementById("map-filter-municipio");
   if (unidade) unidade.value = "";
   if (municipio) municipio.value = "";
-  if (popup) popup.remove();
+  if (popupMapaAberto()) fecharPopupMapa();
   aplicarFiltrosMapa();
 }
 
-async function adicionarRegioes() {
-  const [geojson, paleta] = await Promise.all([
-    carregarJson("/api/geo/ce-regioes", { type: "FeatureCollection", features: [] }),
-    carregarJson("/api/geo/regioes-paleta", { regioes: [], cores: {} }),
-  ]);
-
+function adicionarRegioes(geojson, paleta) {
   map.addSource(CE_REGIOES_SOURCE, {
     type: "geojson",
     data: geojson,
@@ -516,16 +534,14 @@ async function adicionarRegioes() {
   });
 }
 
-async function carregarImagemUnidade() {
+async function carregarImagemUnidade(imagemPronta) {
   if (map.hasImage(PINO_UNIDADE_IMAGE_ID)) return true;
+  const img = imagemPronta || (await prefetchImagemUnidade());
+  if (!img) {
+    console.warn("Ícone das unidades indisponível; usando círculo.");
+    return false;
+  }
   try {
-    const img = await new Promise((resolve, reject) => {
-      const im = new Image();
-      im.crossOrigin = "anonymous";
-      im.onload = () => resolve(im);
-      im.onerror = reject;
-      im.src = PINO_UNIDADE_URL;
-    });
     map.addImage(PINO_UNIDADE_IMAGE_ID, img);
     return true;
   } catch (error) {
@@ -534,11 +550,8 @@ async function carregarImagemUnidade() {
   }
 }
 
-async function adicionarUnidades() {
-  unidadesGeojson = await carregarJson("/api/unidades/geojson", {
-    type: "FeatureCollection",
-    features: [],
-  });
+async function adicionarUnidades(geojson, imagemPronta) {
+  unidadesGeojson = geojson || { type: "FeatureCollection", features: [] };
 
   map.addSource(UNIDADES_SOURCE, {
     type: "geojson",
@@ -546,7 +559,7 @@ async function adicionarUnidades() {
     promoteId: "id",
   });
 
-  const temImagem = await carregarImagemUnidade();
+  const temImagem = await carregarImagemUnidade(imagemPronta);
   if (temImagem) {
     map.addLayer({
       id: UNIDADES_LAYER,
@@ -557,8 +570,8 @@ async function adicionarUnidades() {
         "icon-size": [
           "case",
           [">", ["to-number", ["get", "ofertas_data_recente"], 0], 0],
-          0.54,
-          0.42,
+          0.95,
+          0.78,
         ],
         "icon-anchor": "bottom",
         "icon-allow-overlap": true,
@@ -590,11 +603,8 @@ async function adicionarUnidades() {
   });
 }
 
-async function adicionarVagas() {
-  vagasGeojson = await carregarJson("/api/vagas/geojson", {
-    type: "FeatureCollection",
-    features: [],
-  });
+function adicionarVagas(geojson) {
+  vagasGeojson = geojson || { type: "FeatureCollection", features: [] };
   dataMaisRecente = calcularDataMaisRecente();
   atualizarUltimaAtualizacao(vagasGeojson.ultima_atualizacao || "");
 }
@@ -644,11 +654,7 @@ function focarVagaDaUrl() {
   if (municipioSelect) municipioSelect.value = filtros.municipio;
   aplicarFiltrosMapa();
   map.flyTo({ center: feature.geometry.coordinates, zoom: 13, speed: 0.9 });
-  popup
-    .setLngLat(feature.geometry.coordinates)
-    .setHTML(buildVagaPopupHtml(feature.properties))
-    .addTo(map);
-  ligarAcoesPopup(dadosAgendamentoDeProps(feature.properties), "vaga");
+  abrirPopupMapa(buildVagaPopupHtml(feature.properties), dadosAgendamentoDeProps(feature.properties), "vaga");
   return true;
 }
 
@@ -724,20 +730,58 @@ function htmlBotaoRota(props, coords) {
   return `<button type="button" class="map-popup-btn map-popup-btn-route" data-abrir-rota data-lat="${escapeAttr(lat)}" data-lng="${escapeAttr(lng)}" data-label="${escapeAttr(props.unidade || "")}" data-address="${escapeAttr(destino)}">Traçar rota</button>`;
 }
 
-function abrirPopupUnidade(feature) {
-  const props = feature.properties || {};
-  popup
-    .setLngLat(feature.geometry.coordinates)
-    .setHTML(buildUnidadePopupHtml(props, feature.geometry.coordinates))
-    .addTo(map);
-  ligarAcoesPopup(dadosAgendamentoDeProps(props), "unidade");
+function popupMapaAberto() {
+  const root = document.getElementById("map-feature-popup");
+  return Boolean(root && !root.classList.contains("hidden"));
 }
 
-function ligarAcoesPopup(dadosAgendamento, tipo) {
-  const el = popup && popup.getElement();
+function fecharPopupMapa() {
+  const root = document.getElementById("map-feature-popup");
+  const body = document.getElementById("map-feature-popup-body");
+  root?.classList.add("hidden");
+  root?.classList.remove("map-popup--unidade", "map-popup--vaga");
+  document.body.classList.remove("map-popup-open");
+  if (body) body.innerHTML = "";
+}
+
+function configurarPopupMapa() {
+  const root = document.getElementById("map-feature-popup");
+  if (!root || root.dataset.bound === "1") return;
+  root.dataset.bound = "1";
+  root.querySelectorAll("[data-map-popup-close]").forEach((el) => {
+    el.addEventListener("click", fecharPopupMapa);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !popupMapaAberto()) return;
+    if (document.getElementById("rota-dialog") || document.getElementById("agendar-dialog")) return;
+    fecharPopupMapa();
+  });
+}
+
+function abrirPopupMapa(html, dadosAgendamento, tipo) {
+  const root = document.getElementById("map-feature-popup");
+  const body = document.getElementById("map-feature-popup-body");
+  if (!root || !body) return;
+  body.innerHTML = html;
+  root.classList.remove("hidden");
+  root.classList.toggle("map-popup--vaga", tipo === "vaga");
+  root.classList.toggle("map-popup--unidade", tipo !== "vaga");
+  document.body.classList.add("map-popup-open");
+  ligarAcoesPopup(dadosAgendamento);
+}
+
+function abrirPopupUnidade(feature) {
+  const props = feature.properties || {};
+  abrirPopupMapa(
+    buildUnidadePopupHtml(props, feature.geometry.coordinates),
+    dadosAgendamentoDeProps(props),
+    "unidade"
+  );
+}
+
+function ligarAcoesPopup(dadosAgendamento) {
+  const el = document.getElementById("map-feature-popup-body");
   if (!el) return;
-  el.classList.remove("map-popup--unidade", "map-popup--vaga");
-  if (tipo) el.classList.add(`map-popup--${tipo}`);
   if (typeof DetalhesVaga !== "undefined") {
     DetalhesVaga.ligarAgendamento(el, dadosAgendamento);
   }
@@ -765,7 +809,7 @@ function buildVagaPopupHtml(props) {
     : escapeHtml("Não informado");
   return `
     <div class="popup-rich popup-rich--vaga">
-      <h4>${escapeHtml(props.ocupacao || "Vaga")}</h4>
+      <h4 id="map-popup-titulo">${escapeHtml(props.ocupacao || "Vaga")}</h4>
       <div class="popup-kv">
         ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
@@ -786,7 +830,7 @@ function buildUnidadePopupHtml(props, coords) {
   const celular = String(props.celular_responsavel || "").trim();
   return `
     <div class="popup-rich popup-rich--unidade">
-      <h4>${escapeHtml(props.unidade || "Unidade IDT")}</h4>
+      <h4 id="map-popup-titulo">${escapeHtml(props.unidade || "Unidade IDT")}</h4>
       <div class="popup-kv">
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Vagas recentes", escapeHtml(String(Number(props.ofertas_data_recente) || 0)))}
@@ -889,13 +933,6 @@ function escapeAttr(valor) {
     .replace(/</g, "&lt;");
 }
 
-function isMobileMapa() {
-  return (
-    window.matchMedia("(max-width: 860px)").matches ||
-    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "")
-  );
-}
-
 function configurarLocalizacao() {
   if (!map || typeof maplibregl === "undefined") return;
 
@@ -915,11 +952,6 @@ function configurarLocalizacao() {
   map.addControl(geolocateControl, "top-right");
 
   const btn = document.getElementById("map-locate-btn");
-  const atualizarBotaoLocalizacao = () => {
-    if (!btn) return;
-    btn.hidden = !isMobileMapa();
-  };
-  atualizarBotaoLocalizacao();
   if (btn) {
     btn.addEventListener("click", () => {
       if (!window.isSecureContext) {
@@ -936,7 +968,6 @@ function configurarLocalizacao() {
 
   geolocateControl.on("geolocate", () => {
     if (!btn) return;
-    btn.hidden = !isMobileMapa();
     btn.textContent = "Centralizar em mim";
     btn.setAttribute("aria-label", "Centralizar o mapa na minha localização");
     btn.classList.add("is-active");
@@ -950,9 +981,10 @@ function configurarLocalizacao() {
         : "Não foi possível obter sua localização. Tente novamente."
     );
   });
-
-  window.addEventListener("resize", atualizarBotaoLocalizacao);
 }
+
+const dadosMapaInicio = prefetchDadosMapa();
+const imagemUnidadeInicio = prefetchImagemUnidade();
 
 async function initMapa() {
   if (typeof maplibregl === "undefined") {
@@ -960,19 +992,24 @@ async function initMapa() {
     return;
   }
 
+  const dadosMapaPromise = dadosMapaInicio;
+  const imagemUnidadePromise = imagemUnidadeInicio;
+  if (typeof DetalhesVaga !== "undefined") {
+    DetalhesVaga.init();
+    DetalhesVaga.carregarPostos().catch((error) => console.error(error));
+  }
+
   map = new maplibregl.Map({
     container: "map-main",
     style: MAP_STYLE,
     center: [-39.2, -5.2],
     zoom: 6,
+    fadeDuration: 0,
+    renderWorldCopies: false,
+    attributionControl: true,
   });
 
-  popup = new maplibregl.Popup({
-    closeButton: true,
-    maxWidth: "380px",
-    className: "map-popup",
-    offset: 16,
-  });
+  configurarPopupMapa();
   map.addControl(new maplibregl.NavigationControl(), "top-right");
   map.addControl(createCearaExtentControl(), "top-right");
   map.addControl(new maplibregl.ScaleControl({ maxWidth: 100 }), "bottom-left");
@@ -984,27 +1021,38 @@ async function initMapa() {
   );
   configurarLocalizacao();
 
-  map.on("load", async () => {
+  let camadasProntas = false;
+  const montarCamadas = async () => {
+    if (camadasProntas) return;
+    camadasProntas = true;
     setStatus("Carregando camadas do mapa...");
-    DetalhesVaga.init();
-    try {
-      await DetalhesVaga.carregarPostos();
-    } catch (error) {
-      console.error(error);
-    }
-    await adicionarRegioes();
-    await adicionarUnidades();
-    await adicionarVagas();
+    const [[geojson, paleta, unidades, vagas], imagemUnidade] = await Promise.all([
+      dadosMapaPromise,
+      imagemUnidadePromise,
+    ]);
+    adicionarRegioes(geojson, paleta);
+    await adicionarUnidades(unidades, imagemUnidade);
+    adicionarVagas(vagas);
     popularFiltros();
     configurarFiltros();
     configurarCursor();
     configurarLimpezaCliqueFora();
     const focou = focarVagaDaUrl();
     if (!focou) aplicarFiltrosMapa();
-    if (!focou) fitCeara();
+    if (!focou) {
+      map.fitBounds(CE_ESTADO_BOUNDS, {
+        padding: { top: 18, right: 18, bottom: 34, left: 18 },
+        maxZoom: 6,
+        duration: 0,
+      });
+    }
     const total = vagasGeojson ? vagasGeojson.features.length : 0;
     setStatus(`${total} vaga(s) com localização. O mapa mostra as unidades IDT.`);
-  });
+  };
+
+  map.once("style.load", montarCamadas);
+  map.once("load", montarCamadas);
+  if (map.isStyleLoaded()) montarCamadas();
 }
 
 document.addEventListener("DOMContentLoaded", initMapa);
