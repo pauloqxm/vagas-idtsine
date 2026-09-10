@@ -254,6 +254,7 @@ def _row_para_vaga(row: List[str]) -> Optional[Dict[str, Any]]:
             "bairro": info.get("bairro") or "",
             "tipo_contratacao": str(row[14] or "").strip(),
             "observacao": str(row[15] or "").strip() or None,
+            "gestao": info.get("gestao", ""),
         }
     except (ValueError, IndexError):
         return None
@@ -325,6 +326,7 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "bairro": info.get("bairro") or "",
         "tipo_contratacao": _limpar_texto(item.get("tipoVaga") or ""),
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
+        "gestao": info.get("gestao", ""),
     }
 
 
@@ -483,6 +485,7 @@ def get_postos_atendimento() -> Dict[str, Dict[str, Any]]:
             "telefone_unidade": info.get("telefone_unidade", ""),
             "endereco": info.get("endereco", ""),
             "bairro": info.get("bairro", ""),
+            "gestao": info.get("gestao", ""),
         }
         for codigo, info in postos.items()
     }

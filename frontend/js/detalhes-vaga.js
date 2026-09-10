@@ -52,6 +52,7 @@ const DetalhesVaga = {
       bairro: posto.bairro || vaga.bairro || "",
       municipio: posto.municipio || vaga.municipio || "",
       unidade: vaga.unidade || posto.unidade || "",
+      gestao: posto.gestao || vaga.gestao || "",
     };
   },
 
@@ -98,16 +99,104 @@ const DetalhesVaga = {
         ${email ? `<div><strong>E-mail:</strong> <a href="mailto:${this.escapeAttr(email)}">${this.escapeHtml(email)}</a></div>` : ""}
       </div>
       <div class="modal-actions">
+        ${this.htmlAgendamento(dados)}
         <button type="button" class="btn btn-light" id="modal-fechar-btn">Fechar</button>
       </div>
     `;
 
     this.els.modal.classList.remove("hidden");
+    this.ligarAgendamento(this.els.modalBody, dados);
     document.getElementById("modal-fechar-btn")?.addEventListener("click", () => this.fechar());
   },
 
   fechar() {
     this.els.modal?.classList.add("hidden");
+  },
+
+  urlAgendamentoIdt: "https://idt.org.br/saa4/login",
+  urlAgendamentoVaptVupt: "https://meuvaptvupt.com.br/agendamentos/solicitar-agendamento",
+
+  avisoAgendamento: "O agendamento não assegura a vaga, vá até a unidade agendada.",
+
+  normalizarGestao(valor) {
+    const texto = String(valor || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+    if (texto.includes("prefeitura")) return "prefeitura";
+    if (texto.includes("vapt")) return "vaptvupt";
+    if (texto.includes("idt")) return "idt";
+    return "";
+  },
+
+  htmlAgendamento(vaga, compact = false) {
+    const sm = compact ? " btn-sm" : "";
+    return `
+      <span class="agendar-wrap">
+        <button type="button" class="btn btn-agendar${sm}" data-agendar="${this.escapeAttr(vaga.posto_atendimento || "")}" data-gestao="${this.escapeAttr(vaga.gestao || "")}" data-telefone="${this.escapeAttr(vaga.telefone_unidade || "")}">Agendamento</button>
+        <button type="button" class="agendar-info" data-agendar-info aria-label="Informação sobre o agendamento" title="Informação sobre o agendamento">i</button>
+      </span>
+    `;
+  },
+
+  ligarAgendamento(raiz, vaga) {
+    raiz?.querySelectorAll("[data-agendar]").forEach((btn) => {
+      btn.addEventListener("click", () => this.executarAgendamento(btn, vaga));
+    });
+    raiz?.querySelectorAll("[data-agendar-info]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.abrirDialogo("Agendamento", this.avisoAgendamento);
+      });
+    });
+  },
+
+  async executarAgendamento(botao, vaga) {
+    await this.carregarPostos();
+    const postoCodigo = botao?.dataset?.agendar || vaga?.posto_atendimento || "";
+    const posto = this.dadosDoPosto(postoCodigo) || {};
+    const gestao = this.normalizarGestao(
+      posto.gestao || vaga?.gestao || botao?.dataset?.gestao || ""
+    );
+    const telefone = String(
+      posto.telefone_unidade || vaga?.telefone_unidade || botao?.dataset?.telefone || ""
+    ).trim();
+
+    if (gestao === "idt") {
+      window.open(this.urlAgendamentoIdt, "_blank", "noopener");
+      return;
+    }
+    if (gestao === "vaptvupt") {
+      window.open(this.urlAgendamentoVaptVupt, "_blank", "noopener");
+      return;
+    }
+
+    const numero = telefone || "não informado";
+    this.abrirDialogo(
+      "Agendamento",
+      `Esta unidade não possui agendamento entre em contato pelo numero ${numero}`
+    );
+  },
+
+  abrirDialogo(titulo, mensagem) {
+    document.getElementById("agendar-dialog")?.remove();
+    const dialog = document.createElement("div");
+    dialog.id = "agendar-dialog";
+    dialog.className = "agendar-dialog";
+    dialog.innerHTML = `
+      <div class="agendar-dialog__backdrop" data-agendar-close></div>
+      <div class="agendar-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="agendar-dialog-titulo">
+        <h3 id="agendar-dialog-titulo">${this.escapeHtml(titulo)}</h3>
+        <p>${this.escapeHtml(mensagem)}</p>
+        <button type="button" class="btn btn-primary" data-agendar-close>Fechar</button>
+      </div>
+    `;
+    dialog.querySelectorAll("[data-agendar-close]").forEach((el) => {
+      el.addEventListener("click", () => dialog.remove());
+    });
+    document.body.appendChild(dialog);
   },
 
   detalheTelefone(rotulo, valor) {

@@ -450,6 +450,7 @@ function renderLista() {
       abrirDetalhes(btn.dataset.openVaga, btn.dataset.postoAtendimento || "")
     );
   });
+  DetalhesVaga.ligarAgendamento(els.lista);
 }
 
 function atualizarBotoesVisualizacao() {
@@ -496,6 +497,7 @@ function renderCard(vaga) {
       <div class="vaga-actions">
         <button type="button" class="btn btn-primary" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
         <a class="btn btn-map" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
+        ${DetalhesVaga.htmlAgendamento(vaga)}
       </div>
     </article>
   `;
@@ -522,6 +524,7 @@ function renderLinhaTabela(vaga) {
         <div class="vagas-table-actions">
           <button type="button" class="btn btn-primary btn-sm" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
           <a class="btn btn-map btn-sm" href="${escapeAttr(mapaHref)}">Ver no mapa</a>
+          ${DetalhesVaga.htmlAgendamento(vaga, true)}
         </div>
       </td>
     </tr>

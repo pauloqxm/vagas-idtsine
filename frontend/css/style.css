@@ -385,6 +385,78 @@ h1 {
   filter: brightness(1.08);
 }
 
+.btn-agendar {
+  background: var(--idt-green);
+  color: #fff;
+}
+
+.btn-agendar:hover,
+.btn-agendar:focus-visible {
+  background: var(--idt-green-hover);
+  outline: none;
+}
+
+.agendar-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.agendar-info {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--idt-blue);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--idt-blue);
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agendar-info:hover,
+.agendar-info:focus-visible {
+  background: var(--idt-blue);
+  color: #fff;
+  outline: none;
+}
+
+.agendar-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.agendar-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.agendar-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 2rem));
+  margin: 18vh auto 0;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.agendar-dialog__panel h3 {
+  margin: 0 0 0.5rem;
+  color: var(--idt-blue);
+}
+
+.agendar-dialog__panel p {
+  margin: 0 0 1rem;
+  color: #334155;
+}
+
 .quick-filters {
   display: flex;
   flex-wrap: wrap;
@@ -2008,6 +2080,15 @@ h1 {
 
   .vaga-actions .btn {
     width: 100%;
+  }
+
+  .vaga-actions .agendar-wrap {
+    width: 100%;
+  }
+
+  .vaga-actions .agendar-wrap .btn-agendar {
+    flex: 1;
+    width: auto;
   }
 
   .search-actions-row {
