@@ -8,7 +8,7 @@ const CE_REGIOES_FILL = "layer-ce-regioes-fill";
 const CE_REGIOES_LINE = "layer-ce-regioes-line";
 const UNIDADES_SOURCE = "source-unidades";
 const UNIDADES_LAYER = "layer-unidades";
-const PINO_UNIDADE_URL = "img/pino-unidade.svg";
+const PINO_UNIDADE_URL = "https://i.ibb.co/N6jfVtjN/pino-unidade.png";
 const PINO_UNIDADE_IMAGE_ID = "pino-unidade-idt";
 const MAP_STYLE = {
   version: 8,
@@ -16,13 +16,12 @@ const MAP_STYLE = {
     osm: {
       type: "raster",
       tiles: [
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
       tileSize: 256,
       attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     },
   },
   layers: [
@@ -230,6 +229,7 @@ function prefetchDadosMapa() {
 function prefetchImagemUnidade() {
   return new Promise((resolve) => {
     const im = new Image();
+    im.crossOrigin = "anonymous";
     im.onload = () => resolve(im);
     im.onerror = () => resolve(null);
     im.src = PINO_UNIDADE_URL;
@@ -570,8 +570,8 @@ async function adicionarUnidades(geojson, imagemPronta) {
         "icon-size": [
           "case",
           [">", ["to-number", ["get", "ofertas_data_recente"], 0], 0],
-          0.95,
-          0.78,
+          0.54,
+          0.42,
         ],
         "icon-anchor": "bottom",
         "icon-allow-overlap": true,
