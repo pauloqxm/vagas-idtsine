@@ -6,7 +6,7 @@ set PY=C:\Users\paulo\AppData\Local\Programs\Python\Python313\python.exe
 
 if not defined PORT set PORT=8020
 if not defined VAGAS_IMO_API_KEY (
-  echo Defina VAGAS_IMO_API_KEY para usar a API de vagas. Sem a chave, o sistema tenta o Google Sheets.
+  echo Defina VAGAS_IMO_API_KEY. Sem a chave, as vagas nao carregam.
 )
 
 "%PY%" -m pip install -r "%~dp0requirements.txt" -q

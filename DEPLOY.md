@@ -32,7 +32,7 @@ vagas/
 | Vagas | API `https://sistemas2.idt.org.br/api_vagasimo/api/vagas` |
 | Unidades / postos | Planilha Google Sheets, gid `1623874059` |
 
-A chave da API fica na variável de ambiente `VAGAS_IMO_API_KEY` (header `x-api-key`). Se a API falhar ou a chave não estiver definida, o backend tenta a planilha de vagas como fallback.
+A chave da API fica na variável de ambiente `VAGAS_IMO_API_KEY` (header `x-api-key`). As vagas vêm só da API: chave inválida ou API fora do ar não carrega a lista. A planilha de unidades continua em uso para município, endereço e mapa.
 
 O servidor precisa de **acesso HTTPS de saída** para `sistemas2.idt.org.br` e `docs.google.com`.
 

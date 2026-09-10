@@ -28,7 +28,7 @@ run.bat
 
 As vagas vêm da **API do IDT**. Unidades/postos continuam na planilha do Google Sheets.
 
-- Chave: variável de ambiente `VAGAS_IMO_API_KEY` (Railway → Variables)
+- Chave: variável de ambiente `VAGAS_IMO_API_KEY` (Railway → Variables). Sem ela, as vagas não carregam.
 - Cache: vagas 5 min, unidades 1 h
 - Forçar atualização: `GET /api/vagas/refresh`
 

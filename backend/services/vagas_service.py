@@ -416,21 +416,14 @@ def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
         return CACHE["data"]
 
     try:
-        fonte = "API"
-        try:
-            vagas, ultima_atualizacao = _ler_api()
-        except Exception as api_exc:
-            logger.warning("Falha na API de vagas (%s). Tentando Google Sheets.", api_exc)
-            fonte = "Sheets"
-            vagas, ultima_atualizacao = _ler_sheets()
-
+        vagas, ultima_atualizacao = _ler_api()
         _enriquecer_dias_ofertadas(vagas)
         vagas = _deduplicar_vagas(vagas)
 
         CACHE["data"] = vagas
         CACHE["ultima_atualizacao"] = ultima_atualizacao
         CACHE["timestamp"] = now
-        logger.info("Vagas carregadas da %s: %d registros únicos.", fonte, len(vagas))
+        logger.info("Vagas carregadas da API: %d registros únicos.", len(vagas))
         return vagas
 
     except Exception as exc:
