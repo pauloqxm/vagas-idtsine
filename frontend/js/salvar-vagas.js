@@ -329,6 +329,11 @@ const SalvarVagas = {
         color: #008f4b;
       }
 
+      .print-summary__item--blue {
+        background: #eaf3f8;
+        color: #003d68;
+      }
+
       .print-summary__item--orange {
         background: #fff4ef;
         color: #d95415;
@@ -590,7 +595,7 @@ const SalvarVagas = {
     `;
   },
 
-  montarDocumento({ municipio, vagas, totalVagas, totalPcd, unidades, logoSrc, formato }) {
+  montarDocumento({ municipio, vagas, totalVagas, totalInclusiva, totalPcd, unidades, logoSrc, formato }) {
     const data = this.dataHojeBR();
     const logo =
       logoSrc ||
@@ -634,6 +639,11 @@ const SalvarVagas = {
     <div class="print-summary">
       <span class="print-summary__item">${vagas.length} oferta(s)</span>
       <span class="print-summary__item print-summary__item--green">${totalVagas} vaga(s)</span>
+      ${
+        Number(totalInclusiva) > 0
+          ? `<span class="print-summary__item print-summary__item--blue">${totalInclusiva} vaga(s) inclusiva(s)</span>`
+          : ""
+      }
       ${
         totalPcd > 0
           ? `<span class="print-summary__item print-summary__item--orange">${totalPcd} vaga(s) PCD</span>`
@@ -1052,12 +1062,14 @@ const SalvarVagas = {
     const municipioSel = String(municipio || "").trim();
     const lista = Array.isArray(vagas) ? vagas : [];
     let totalVagas = 0;
+    let totalInclusiva = 0;
     let totalPcd = 0;
     lista.forEach((vaga) => {
       const q = this.qtde(vaga);
       totalVagas += q;
       const categoria = DetalhesVaga.categoriaPcd(vaga);
-      if (categoria === "exclusiva" || categoria === "inclusiva") totalPcd += q;
+      if (categoria === "exclusiva") totalPcd += q;
+      else if (categoria === "inclusiva") totalInclusiva += q;
     });
 
     const unidades = this.obterUnidades(lista);
@@ -1066,6 +1078,7 @@ const SalvarVagas = {
       municipio: municipioSel,
       vagas: lista,
       totalVagas,
+      totalInclusiva,
       totalPcd,
       unidades,
       logoSrc,
@@ -1299,6 +1312,7 @@ const SalvarVagas = {
         municipio: municipioSel,
         vagas: Array.isArray(vagas) ? vagas : [],
         totalVagas,
+        totalInclusiva: 0,
         totalPcd: 0,
         unidades,
         logoSrc,
