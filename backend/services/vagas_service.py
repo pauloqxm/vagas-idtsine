@@ -108,6 +108,25 @@ def _parse_bool(val: Any) -> bool:
     return s in {"1", "true", "sim", "yes"}
 
 
+def _normalizar_pcd(val: Any) -> str:
+    if isinstance(val, bool):
+        return "exclusiva" if val else "regular"
+    if isinstance(val, (int, float)):
+        return "exclusiva" if int(val) == 1 else "regular"
+    texto = unicodedata.normalize("NFD", str(val or ""))
+    texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
+    texto = texto.lower().strip()
+    if not texto:
+        return "regular"
+    if "exclusiv" in texto:
+        return "exclusiva"
+    if "inclusiv" in texto:
+        return "inclusiva"
+    if texto in {"1", "true", "sim", "yes"}:
+        return "exclusiva"
+    return "regular"
+
+
 def _api_key() -> str:
     return str(os.getenv("VAGAS_IMO_API_KEY") or "").strip()
 
@@ -237,7 +256,7 @@ def _row_para_vaga(row: List[str]) -> Optional[Dict[str, Any]]:
             "ocupacao": ocupacao,
             "codigo_cbo": str(row[2] or "").strip(),
             "qtde_vagas": _parse_int(row[9] or "1"),
-            "pcd": str(row[11] or "").strip() == "1",
+            "pcd": _normalizar_pcd(row[11] if len(row) > 11 else ""),
             "unidade": str(row[20] or "").strip() or info.get("unidade", ""),
             "posto_atendimento": posto,
             "municipio": info.get("municipio", ""),
@@ -309,7 +328,16 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "ocupacao": ocupacao,
         "codigo_cbo": _limpar_texto(item.get("codigo") or ""),
         "qtde_vagas": _parse_int(item.get("quantidade") or "1"),
-        "pcd": _parse_bool(item.get("ehPcd")),
+        "pcd": _normalizar_pcd(
+            next(
+                (
+                    item.get(chave)
+                    for chave in ("pcd", "tipoPcd", "perfilPcd", "categoriaPcd", "ehPcd")
+                    if item.get(chave) not in (None, "")
+                ),
+                "",
+            )
+        ),
         "unidade": _limpar_texto(item.get("descricaoUnidade") or "") or info.get("unidade", ""),
         "posto_atendimento": posto,
         "municipio": info.get("municipio", ""),

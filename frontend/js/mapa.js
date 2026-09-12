@@ -259,17 +259,8 @@ function preencherSelect(id, valores, labelInicial) {
 }
 
 function labelPeriodoData() {
-  const labels = {
-    "mais-recente": "Data mais recente",
-    qualquer: "Qualquer data",
-    hoje: "Hoje",
-    2: "Últimos dois dias",
-    3: "Últimos três dias",
-    7: "Última semana",
-    15: "Últimos 15 dias",
-    30: "Último mês",
-  };
-  return labels[filtros.dataPeriodo] || "Data";
+  const data = formatarDataBR(dataMaisRecente);
+  return data ? `Data mais recente (${data})` : "Data mais recente";
 }
 
 function popularFiltros() {
@@ -299,9 +290,16 @@ function atualizarResumo() {
   if (!el) return;
   const vagas = vagasFiltradas();
   const total = vagas.reduce((acc, feature) => acc + qtdeFeature(feature), 0);
-  const pcd = vagas.reduce(
+  const exclusiva = vagas.reduce(
     (acc, feature) =>
-      feature.properties && (feature.properties.pcd === true || feature.properties.pcd === "true")
+      categoriaPcdProps(feature.properties) === "exclusiva"
+        ? acc + qtdeFeature(feature)
+        : acc,
+    0
+  );
+  const inclusiva = vagas.reduce(
+    (acc, feature) =>
+      categoriaPcdProps(feature.properties) === "inclusiva"
         ? acc + qtdeFeature(feature)
         : acc,
     0
@@ -319,7 +317,8 @@ function atualizarResumo() {
     <div class="map-results-period">${escapeHtml(labelPeriodoData())}</div>
     <div class="map-results-grid">
       <div class="map-results-stat"><span>Total de vagas</span><b>${total}</b></div>
-      <div class="map-results-stat"><span>Vagas PCD</span><b>${pcd}</b></div>
+      <div class="map-results-stat"><span>Inclusiva</span><b>${inclusiva}</b></div>
+      <div class="map-results-stat"><span>Exclusiva PCD</span><b>${exclusiva}</b></div>
       <div class="map-results-stat"><span>Unidades com vagas</span><b>${unidades.size}</b></div>
     </div>
   `;
@@ -383,7 +382,7 @@ function renderTabelaVagas() {
   tbody.innerHTML = pagina
     .map((feature, pageIndex) => {
       const p = feature.properties || {};
-      const pcd = p.pcd === true || p.pcd === "true";
+      const categoria = categoriaPcdProps(p);
       const ocupacao = p.ocupacao || "Não informado";
       const globalIndex = inicio + pageIndex;
       return `
@@ -394,7 +393,7 @@ function renderTabelaVagas() {
             </button>
           </td>
           <td data-label="Quantidade">${Number(p.qtde_vagas) || 1}</td>
-          <td data-label="PCD"><span class="map-vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+          <td data-label="PCD"><span class="map-vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotuloPcdProps(p))}</span></td>
           <td data-label="Município">${escapeHtml(p.municipio || "Não informado")}</td>
           <td data-label="Unidade">${escapeHtml(p.unidade || "Não informado")}</td>
         </tr>
@@ -607,13 +606,40 @@ function adicionarVagas(geojson) {
   vagasGeojson = geojson || { type: "FeatureCollection", features: [] };
   dataMaisRecente = calcularDataMaisRecente();
   atualizarUltimaAtualizacao(vagasGeojson.ultima_atualizacao || "");
+  const dataSelect = document.getElementById("map-filter-data");
+  if (dataSelect) {
+    const data = formatarDataBR(dataMaisRecente);
+    dataSelect.innerHTML = `<option value="mais-recente" selected>${escapeHtml(
+      data ? `Data mais recente (${data})` : "Data mais recente"
+    )}</option>`;
+  }
+}
+
+function formatarDataBR(data) {
+  if (!data) return "";
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  return `${dia}/${mes}/${data.getFullYear()}`;
+}
+
+function categoriaPcdProps(props) {
+  return typeof DetalhesVaga !== "undefined"
+    ? DetalhesVaga.categoriaPcd(props || {})
+    : "regular";
+}
+
+function rotuloPcdProps(props) {
+  return typeof DetalhesVaga !== "undefined"
+    ? DetalhesVaga.rotuloPcd(props || {})
+    : "Vagas Regulares";
 }
 
 function atualizarUltimaAtualizacao(valor) {
   const el = document.getElementById("ultima-atualizacao");
   if (!el) return;
-  const texto = String(valor || "").trim();
-  el.textContent = texto ? `Última atualização: ${texto}` : "";
+  const data =
+    formatarDataBR(dataMaisRecente) || String(valor || "").trim();
+  el.textContent = data ? `Dados extraídos via Portal MTb em ${data}` : "";
 }
 
 function configurarCursor() {
@@ -814,7 +840,7 @@ function buildVagaPopupHtml(props) {
         ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
-        ${htmlLinhaPopup("PCD", escapeHtml(props.pcd === true || props.pcd === "true" ? "Sim" : "Não"))}
+        ${htmlLinhaPopup("Perfil", escapeHtml(rotuloPcdProps(props)))}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
         ${htmlLinhaPopup("E-mail", emailHtml)}
       </div>

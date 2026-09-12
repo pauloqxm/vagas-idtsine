@@ -76,27 +76,24 @@
                 <option value="">Todos</option>
               </select>
             </label>
-            <label class="search-field">
-              <span class="sr-only">Data</span>
+            <label class="search-field search-field--locked">
+              <span class="sr-only">Data mais recente</span>
               <span aria-hidden="true" class="field-icon">Data</span>
-              <select id="filtro-data">
-                <option value="mais-recente" selected>Data mais recente</option>
-                <option value="qualquer">Qualquer data</option>
-                <option value="hoje">Hoje</option>
-                <option value="2">Últimos dois dias</option>
-                <option value="3">Últimos três dias</option>
-                <option value="7">Última semana</option>
-                <option value="15">Últimos 15 dias</option>
-                <option value="30">Último mês</option>
-              </select>
+              <input id="filtro-data" type="text" value="Data mais recente" readonly tabindex="-1" aria-readonly="true" />
             </label>
           </div>
 
           <div class="search-actions-row" aria-label="Filtros e ações">
-            <label class="search-actions-row__pcd">
-              <input type="checkbox" id="filtro-pcd" />
-              Mostrar vagas para PCD
-            </label>
+            <div class="search-actions-row__pcd-group" role="group" aria-label="Tipo de vaga">
+              <label class="search-actions-row__pcd">
+                <input type="checkbox" id="filtro-inclusiva" />
+                Inclusiva
+              </label>
+              <label class="search-actions-row__pcd">
+                <input type="checkbox" id="filtro-exclusiva" />
+                Exclusiva PCD
+              </label>
+            </div>
             <div class="search-actions-row__buttons">
               <button type="submit" class="btn btn-primary">Procurar vagas</button>
               <a class="btn btn-map" href="mapa.html">Ver no mapa</a>
@@ -140,17 +137,17 @@
 
     <section class="container kpi-section" aria-label="Indicadores das vagas filtradas">
       <div class="kpi-grid">
-        <div class="kpi-card kpi-card--pcd">
-          <span class="kpi-label">Total de vagas PCD</span>
-          <span class="kpi-value" id="kpi-vagas-pcd">0</span>
-        </div>
         <div class="kpi-card kpi-card--npcd">
-          <span class="kpi-label">Total de vagas sem PCD</span>
-          <span class="kpi-value" id="kpi-vagas-nao-pcd">0</span>
+          <span class="kpi-label">Vagas Regulares</span>
+          <span class="kpi-value" id="kpi-vagas-regulares">0</span>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Total geral das vagas</span>
-          <span class="kpi-value" id="kpi-total-vagas">0</span>
+        <div class="kpi-card kpi-card--inclusiva">
+          <span class="kpi-label">Inclusiva</span>
+          <span class="kpi-value" id="kpi-vagas-inclusiva">0</span>
+        </div>
+        <div class="kpi-card kpi-card--pcd">
+          <span class="kpi-label">Exclusiva PCD</span>
+          <span class="kpi-value" id="kpi-vagas-exclusiva">0</span>
         </div>
       </div>
     </section>

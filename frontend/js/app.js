@@ -10,7 +10,8 @@ const state = {
     unidade: "",
     municipio: "",
     dataPeriodo: "mais-recente",
-    pcd: false,
+    inclusiva: false,
+    exclusiva: false,
   },
   dataMaisRecente: null,
 };
@@ -23,7 +24,8 @@ function cacheEls() {
   els.unidade = document.getElementById("filtro-unidade");
   els.municipio = document.getElementById("filtro-municipio");
   els.data = document.getElementById("filtro-data");
-  els.pcd = document.getElementById("filtro-pcd");
+  els.inclusiva = document.getElementById("filtro-inclusiva");
+  els.exclusiva = document.getElementById("filtro-exclusiva");
   els.status = document.getElementById("status-text");
   els.lista = document.getElementById("lista-vagas");
   els.paginacao = document.getElementById("paginacao");
@@ -32,9 +34,9 @@ function cacheEls() {
   els.modalBody = document.getElementById("modal-body");
   els.popularList = document.getElementById("popular-list");
   els.popularTabs = document.querySelectorAll("[data-popular-tab]");
-  els.kpiTotal = document.getElementById("kpi-total-vagas");
-  els.kpiPcd = document.getElementById("kpi-vagas-pcd");
-  els.kpiNaoPcd = document.getElementById("kpi-vagas-nao-pcd");
+  els.kpiRegulares = document.getElementById("kpi-vagas-regulares");
+  els.kpiInclusiva = document.getElementById("kpi-vagas-inclusiva");
+  els.kpiExclusiva = document.getElementById("kpi-vagas-exclusiva");
   els.ultimaAtualizacao = document.getElementById("ultima-atualizacao");
   els.viewButtons = document.querySelectorAll("[data-view]");
   els.compartilhar = document.getElementById("btn-compartilhar");
@@ -83,6 +85,34 @@ function dataFiltro(vaga) {
   return String(vaga.data_disponibilidade || vaga.data || "").trim();
 }
 
+function formatarDataBR(data) {
+  if (!data) return "";
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  return `${dia}/${mes}/${data.getFullYear()}`;
+}
+
+function categoriaPcd(vaga) {
+  return DetalhesVaga.categoriaPcd(vaga);
+}
+
+function rotuloPcd(vaga) {
+  return DetalhesVaga.rotuloPcd(vaga);
+}
+
+function passaFiltroPcd(vaga) {
+  const tipos = [];
+  if (state.filtros.inclusiva) tipos.push("inclusiva");
+  if (state.filtros.exclusiva) tipos.push("exclusiva");
+  if (!tipos.length) return true;
+  return tipos.includes(categoriaPcd(vaga));
+}
+
+function lerFiltrosPcd() {
+  state.filtros.inclusiva = Boolean(els.inclusiva?.checked);
+  state.filtros.exclusiva = Boolean(els.exclusiva?.checked);
+}
+
 function dataDentroPeriodo(dataTexto, periodo) {
   if (!periodo || periodo === "qualquer") return true;
   const data = parseDataBR(dataTexto);
@@ -117,16 +147,22 @@ async function carregarVagas() {
   const data = await res.json();
   state.vagas = Array.isArray(data.vagas) ? data.vagas : [];
   state.dataMaisRecente = calcularDataMaisRecente();
-  // dias_ofertadas já vem calculado e deduplicado pelo backend
-  atualizarUltimaAtualizacao(data.ultima_atualizacao || "");
+  atualizarCampoDataTravada();
+  atualizarUltimaAtualizacao();
   state.filtradas = [...state.vagas];
 }
 
-function atualizarUltimaAtualizacao(valor) {
+function atualizarCampoDataTravada() {
+  if (!els.data) return;
+  const data = formatarDataBR(state.dataMaisRecente);
+  els.data.value = data || "Data mais recente";
+}
+
+function atualizarUltimaAtualizacao() {
   if (!els.ultimaAtualizacao) return;
-  const texto = String(valor || "").trim();
-  els.ultimaAtualizacao.textContent = texto
-    ? `Última atualização: ${texto}`
+  const data = formatarDataBR(state.dataMaisRecente);
+  els.ultimaAtualizacao.textContent = data
+    ? `Dados extraídos via Portal MTb em ${data}`
     : "";
 }
 
@@ -183,14 +219,14 @@ function aplicarFiltrosDaURL() {
 }
 
 function aplicarFiltros() {
-  const { cargo, unidade, municipio, dataPeriodo, pcd } = state.filtros;
+  const { cargo, unidade, municipio, dataPeriodo } = state.filtros;
 
   state.filtradas = state.vagas.filter((vaga) => {
     if (cargo && !contem(vaga.ocupacao, cargo)) return false;
     if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
     if (municipio && normalizar(vaga.municipio) !== normalizar(municipio)) return false;
     if (!dataDentroPeriodo(dataFiltro(vaga), dataPeriodo)) return false;
-    if (pcd && !vaga.pcd) return false;
+    if (!passaFiltroPcd(vaga)) return false;
     return true;
   });
 
@@ -203,25 +239,26 @@ function totalVagasQuantidades() {
 }
 
 function calcularKPIs() {
-  let total = 0;
-  let pcd = 0;
-  let naoPcd = 0;
+  let regulares = 0;
+  let inclusiva = 0;
+  let exclusiva = 0;
 
   state.filtradas.forEach((vaga) => {
     const q = qtde(vaga);
-    total += q;
-    if (vaga.pcd) pcd += q;
-    else naoPcd += q;
+    const categoria = categoriaPcd(vaga);
+    if (categoria === "exclusiva") exclusiva += q;
+    else if (categoria === "inclusiva") inclusiva += q;
+    else regulares += q;
   });
 
-  return { total, pcd, naoPcd };
+  return { regulares, inclusiva, exclusiva };
 }
 
 function atualizarKPIs() {
-  const { total, pcd, naoPcd } = calcularKPIs();
-  if (els.kpiTotal) els.kpiTotal.textContent = String(total);
-  if (els.kpiPcd) els.kpiPcd.textContent = String(pcd);
-  if (els.kpiNaoPcd) els.kpiNaoPcd.textContent = String(naoPcd);
+  const { regulares, inclusiva, exclusiva } = calcularKPIs();
+  if (els.kpiRegulares) els.kpiRegulares.textContent = String(regulares);
+  if (els.kpiInclusiva) els.kpiInclusiva.textContent = String(inclusiva);
+  if (els.kpiExclusiva) els.kpiExclusiva.textContent = String(exclusiva);
 }
 
 function atualizarStatus() {
@@ -231,8 +268,8 @@ function atualizarStatus() {
     state.filtros.cargo ||
     state.filtros.unidade ||
     state.filtros.municipio ||
-    state.filtros.dataPeriodo !== "mais-recente" ||
-    state.filtros.pcd;
+    state.filtros.inclusiva ||
+    state.filtros.exclusiva;
 
   els.status.textContent =
     totalOfertas === 0
@@ -266,7 +303,7 @@ function vagasDoMunicipioParaCompartilhar(municipio) {
     .filter((vaga) => {
       if (normalizar(vaga.municipio) !== alvo) return false;
       if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
-      if (state.filtros.pcd && !vaga.pcd) return false;
+      if (!passaFiltroPcd(vaga)) return false;
       return true;
     })
     .sort(
@@ -390,8 +427,8 @@ function aplicarBuscaPopular(valor) {
   state.filtros.cargo = els.cargo.value.trim();
   state.filtros.unidade = els.unidade.value;
   state.filtros.municipio = els.municipio.value;
-  state.filtros.dataPeriodo = els.data.value;
-  state.filtros.pcd = els.pcd.checked;
+  state.filtros.dataPeriodo = "mais-recente";
+  lerFiltrosPcd();
   aplicarFiltros();
   renderPopulares();
   document.getElementById("resultados").scrollIntoView({ behavior: "smooth" });
@@ -474,7 +511,13 @@ function diasOfertadas(vaga) {
 }
 
 function renderCard(vaga) {
-  const pcd = vaga.pcd ? '<span class="tag tag-pcd">PCD</span>' : "";
+  const categoria = categoriaPcd(vaga);
+  const pcd =
+    categoria === "exclusiva"
+      ? '<span class="tag tag-pcd">Exclusiva PCD</span>'
+      : categoria === "inclusiva"
+        ? '<span class="tag tag-inclusiva">Inclusiva</span>'
+        : "";
   const mapaHref = `mapa.html?vaga=${encodeURIComponent(vaga.id)}`;
 
   return `
@@ -505,7 +548,8 @@ function renderCard(vaga) {
 
 function renderLinhaTabela(vaga) {
   const mapaHref = `mapa.html?vaga=${encodeURIComponent(vaga.id)}`;
-  const pcd = vaga.pcd === true || vaga.pcd === "true";
+  const categoria = categoriaPcd(vaga);
+  const rotulo = rotuloPcd(vaga);
 
   return `
     <tr>
@@ -519,7 +563,7 @@ function renderLinhaTabela(vaga) {
       <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
       <td data-label="Publicada">${escapeHtml(vaga.data_disponibilidade || "—")}</td>
       <td data-label="Dias ofertadas">${diasOfertadas(vaga)}</td>
-      <td data-label="PCD"><span class="vagas-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+      <td data-label="PCD"><span class="vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotulo)}</span></td>
       <td data-label="Ações">
         <div class="vagas-table-actions">
           <button type="button" class="btn btn-primary btn-sm" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>
@@ -583,27 +627,33 @@ function limparBusca() {
     unidade: "",
     municipio: "",
     dataPeriodo: "mais-recente",
-    pcd: false,
+    inclusiva: false,
+    exclusiva: false,
   };
   els.cargo.value = "";
   els.unidade.value = "";
   els.municipio.value = "";
-  els.data.value = "mais-recente";
-  els.pcd.checked = false;
+  atualizarCampoDataTravada();
+  if (els.inclusiva) els.inclusiva.checked = false;
+  if (els.exclusiva) els.exclusiva.checked = false;
   aplicarFiltros();
   renderPopulares();
   els.cargo.focus();
 }
 
 function bindEvents() {
-  els.form.addEventListener("submit", (event) => {
-    event.preventDefault();
+  const aplicarFiltrosDaTela = () => {
     state.filtros.cargo = els.cargo.value.trim();
     state.filtros.unidade = els.unidade.value;
     state.filtros.municipio = els.municipio.value;
-    state.filtros.dataPeriodo = els.data.value;
-    state.filtros.pcd = els.pcd.checked;
+    state.filtros.dataPeriodo = "mais-recente";
+    lerFiltrosPcd();
     aplicarFiltros();
+  };
+
+  els.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    aplicarFiltrosDaTela();
     document.getElementById("resultados").scrollIntoView({ behavior: "smooth" });
   });
 
@@ -612,34 +662,16 @@ function bindEvents() {
     { select: els.municipio, tipo: "cidades" },
   ].forEach(({ select, tipo }) => {
     select.addEventListener("change", () => {
-      state.filtros.cargo = els.cargo.value.trim();
-      state.filtros.unidade = els.unidade.value;
-      state.filtros.municipio = els.municipio.value;
-      state.filtros.dataPeriodo = els.data.value;
-      state.filtros.pcd = els.pcd.checked;
-      aplicarFiltros();
+      aplicarFiltrosDaTela();
       ativarAbaPopular(tipo);
     });
   });
 
-  els.data.addEventListener("change", () => {
-    state.filtros.cargo = els.cargo.value.trim();
-    state.filtros.unidade = els.unidade.value;
-    state.filtros.municipio = els.municipio.value;
-    state.filtros.dataPeriodo = els.data.value;
-    state.filtros.pcd = els.pcd.checked;
-    aplicarFiltros();
-    renderPopulares();
-  });
-
-  els.pcd.addEventListener("change", () => {
-    state.filtros.cargo = els.cargo.value.trim();
-    state.filtros.unidade = els.unidade.value;
-    state.filtros.municipio = els.municipio.value;
-    state.filtros.dataPeriodo = els.data.value;
-    state.filtros.pcd = els.pcd.checked;
-    aplicarFiltros();
-    renderPopulares();
+  [els.inclusiva, els.exclusiva].forEach((el) => {
+    el?.addEventListener("change", () => {
+      aplicarFiltrosDaTela();
+      renderPopulares();
+    });
   });
 
   els.popularTabs.forEach((tab) => {

@@ -473,6 +473,27 @@ h1 {
   margin-top: 0.9rem;
 }
 
+.search-field--locked {
+  cursor: default;
+}
+
+.search-field--locked:focus-within {
+  border-color: #d8deea;
+  box-shadow: none;
+}
+
+.search-field--locked input {
+  cursor: default;
+  color: #475569;
+}
+
+.search-actions-row__pcd-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .search-actions-row__pcd {
   display: inline-flex;
   align-items: center;
@@ -554,6 +575,10 @@ h1 {
   border-top: 3px solid var(--idt-green);
 }
 
+.kpi-card--inclusiva {
+  border-top: 3px solid var(--idt-blue);
+}
+
 .kpi-label {
   display: block;
   font-size: 0.85rem;
@@ -575,6 +600,10 @@ h1 {
 
 .kpi-card--npcd .kpi-value {
   color: var(--idt-green-hover);
+}
+
+.kpi-card--inclusiva .kpi-value {
+  color: var(--idt-blue);
 }
 
 .status-area {
@@ -1075,6 +1104,11 @@ h1 {
   color: var(--idt-orange-hover);
 }
 
+.tag-inclusiva {
+  background: var(--idt-blue-soft);
+  color: var(--idt-blue);
+}
+
 .tag-dias {
   background: var(--idt-green-soft);
   color: var(--idt-green-hover);
@@ -1499,6 +1533,12 @@ h1 {
   font: inherit;
 }
 
+.map-filters select:disabled {
+  background: #f3f6fa;
+  color: #475569;
+  cursor: default;
+}
+
 .map-layout {
   position: relative;
   overflow: hidden;
@@ -1567,7 +1607,7 @@ h1 {
 
 .map-results-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.8rem;
   margin-top: 0.75rem;
 }

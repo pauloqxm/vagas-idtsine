@@ -90,7 +90,7 @@ const DetalhesVaga = {
         ${dados.endereco ? `<div><strong>Endereço:</strong> ${this.escapeHtml(dados.endereco)}</div>` : ""}
         ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(dados.data_disponibilidade)}</div>` : ""}
         <div><strong>Dias ofertadas:</strong> ${this.diasOfertadas(dados)}</div>
-        ${dados.pcd === true || dados.pcd === "true" ? "<div><strong>Perfil:</strong> vaga para PCD</div>" : ""}
+        <div><strong>Perfil:</strong> ${this.escapeHtml(this.rotuloPcd(dados))}</div>
         ${
           posto || dados.posto_atendimento
             ? `<div><strong>Responsável:</strong> ${this.escapeHtml(responsavelUnidade || "Não informado")}</div>
@@ -118,6 +118,29 @@ const DetalhesVaga = {
   urlAgendamentoVaptVupt: "https://meuvaptvupt.com.br/agendamentos/solicitar-agendamento",
 
   avisoAgendamento: "O agendamento não assegura a vaga, vá até a unidade agendada.",
+
+  categoriaPcd(vaga) {
+    const raw = vaga && vaga.pcd;
+    if (raw === true) return "exclusiva";
+    if (raw === false) return "regular";
+    const texto = String(raw || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+    if (texto.includes("exclusiv") || texto === "1" || texto === "true" || texto === "sim") {
+      return "exclusiva";
+    }
+    if (texto.includes("inclusiv")) return "inclusiva";
+    return "regular";
+  },
+
+  rotuloPcd(vaga) {
+    const categoria = this.categoriaPcd(vaga);
+    if (categoria === "exclusiva") return "Exclusiva PCD";
+    if (categoria === "inclusiva") return "Inclusiva";
+    return "Vagas Regulares";
+  },
 
   normalizarGestao(valor) {
     const texto = String(valor || "")

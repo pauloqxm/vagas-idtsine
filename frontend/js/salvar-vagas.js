@@ -95,7 +95,7 @@ const SalvarVagas = {
   },
 
   renderCard(vaga, index) {
-    const pcd = vaga.pcd === true || vaga.pcd === "true";
+    const categoria = DetalhesVaga.categoriaPcd(vaga);
     const tom = ["blue", "green", "orange"][index % 3];
     return `
       <article class="print-card print-card--${tom}">
@@ -110,7 +110,13 @@ const SalvarVagas = {
             <span><strong>Unidade:</strong> ${this.escapeHtml(vaga.unidade || "Não informado")}</span>
           </div>
           <div class="print-card__tags">
-            ${pcd ? '<span class="print-tag print-tag--pcd">PCD</span>' : ""}
+            ${
+              categoria === "exclusiva"
+                ? '<span class="print-tag print-tag--pcd">Exclusiva PCD</span>'
+                : categoria === "inclusiva"
+                  ? '<span class="print-tag print-tag--inclusiva">Inclusiva</span>'
+                  : ""
+            }
             ${
               vaga.data_disponibilidade
                 ? `<span class="print-tag print-tag--data">Publicada em ${this.escapeHtml(vaga.data_disponibilidade)}</span>`
@@ -126,7 +132,8 @@ const SalvarVagas = {
   renderTabela(vagas) {
     const linhas = (vagas || [])
       .map((vaga) => {
-        const pcd = vaga.pcd === true || vaga.pcd === "true";
+        const categoria = DetalhesVaga.categoriaPcd(vaga);
+        const rotulo = DetalhesVaga.rotuloPcd(vaga);
         return `
           <tr>
             <td>${this.escapeHtml(vaga.ocupacao || "Vaga sem nome")}</td>
@@ -135,7 +142,7 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(vaga.data_disponibilidade || "—")}</td>
             <td>${this.diasOfertadas(vaga)}</td>
-            <td><span class="print-pcd ${pcd ? "is-pcd" : ""}">${pcd ? "Sim" : "Não"}</span></td>
+            <td><span class="print-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${this.escapeHtml(rotulo)}</span></td>
           </tr>
         `;
       })
@@ -503,6 +510,11 @@ const SalvarVagas = {
 
       .print-tag--pcd {
         background: #f26522;
+        color: #fff;
+      }
+
+      .print-tag--inclusiva {
+        background: #003d68;
         color: #fff;
       }
 
@@ -997,7 +1009,8 @@ const SalvarVagas = {
     lista.forEach((vaga) => {
       const q = this.qtde(vaga);
       totalVagas += q;
-      if (vaga.pcd === true || vaga.pcd === "true") totalPcd += q;
+      const categoria = DetalhesVaga.categoriaPcd(vaga);
+      if (categoria === "exclusiva" || categoria === "inclusiva") totalPcd += q;
     });
 
     const unidades = this.obterUnidades(lista);
