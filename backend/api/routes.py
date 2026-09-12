@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
-from backend.services import regioes_service, unidades_service, vagas_service
+from backend.services import oferta_service, regioes_service, unidades_service, vagas_service
 
 router = APIRouter(prefix="/api")
 
@@ -57,6 +58,23 @@ def unidades_geojson():
 @router.get("/geo/regioes-paleta")
 def regioes_paleta():
     return regioes_service.get_regioes_paleta()
+
+
+@router.post("/oferta-vaga")
+def criar_oferta_vaga(body: dict):
+    try:
+        payload = oferta_service.montar_payload(body or {})
+        status, resposta = oferta_service.enviar_oferta(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Não foi possível enviar a solicitação. Tente novamente.",
+        ) from exc
+    return JSONResponse(status_code=status if 200 <= status < 600 else 502, content=resposta)
 
 
 @router.get("/vagas/refresh")

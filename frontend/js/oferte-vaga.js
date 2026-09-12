@@ -109,7 +109,86 @@ document.addEventListener("DOMContentLoaded", () => {
   descricao.addEventListener("input", atualizarContador);
   atualizarContador();
 
-  form.addEventListener("submit", (event) => {
+  const tipoVaga = form.querySelector("#tipo-vaga");
+  const vagaPcd = form.querySelector("#vaga-pcd");
+  tipoVaga?.addEventListener("change", () => {
+    if (tipoVaga.value === "PCD" && vagaPcd) vagaPcd.checked = true;
+  });
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    await enviarOferta(form);
   });
 });
+
+function mensagemErroApi(data) {
+  if (!data) return "Não foi possível enviar a solicitação. Tente novamente.";
+  if (typeof data.mensagem === "string" && data.mensagem.trim()) return data.mensagem;
+  if (typeof data.detail === "string" && data.detail.trim()) return data.detail;
+  if (Array.isArray(data.detail) && data.detail[0]?.msg) return data.detail[0].msg;
+  return "Não foi possível enviar a solicitação. Tente novamente.";
+}
+
+function mostrarStatus(form, mensagem, tipo) {
+  const status = form.querySelector("#offer-status");
+  if (!status) return;
+  status.textContent = mensagem;
+  status.classList.remove("hidden", "offer-status--ok", "offer-status--erro");
+  if (tipo) status.classList.add(`offer-status--${tipo}`);
+}
+
+function montarPayload(form) {
+  const tipo = (form.querySelector('input[name="tipo-cadastro"]:checked')?.value || "CNPJ").toLowerCase();
+  return {
+    empresa: {
+      tipoCadastro: tipo,
+      numero: somenteDigitos(form.querySelector("#numero-inscricao")?.value),
+      nomeEmpresa: form.querySelector("#nome-fantasia")?.value.trim() || "",
+      contato: form.querySelector("#contato")?.value.trim() || "",
+      email: form.querySelector("#email")?.value.trim() || "",
+      telefone: form.querySelector("#telefone")?.value.trim() || "",
+      celular: form.querySelector("#celular")?.value.trim() || "",
+      municipio: form.querySelector("#municipio")?.value.trim() || "",
+    },
+    vaga: {
+      cargo: form.querySelector("#cargo")?.value.trim() || "",
+      tipoVaga: form.querySelector("#tipo-vaga")?.value.trim() || "GERAL",
+      descricaoVaga: form.querySelector("#descricao")?.value.trim() || "",
+      qtdeVaga: Number(somenteDigitos(form.querySelector("#quantidade")?.value)) || 0,
+      pcd: Boolean(form.querySelector("#vaga-pcd")?.checked || form.querySelector("#tipo-vaga")?.value === "PCD"),
+    },
+  };
+}
+
+async function enviarOferta(form) {
+  const botao = form.querySelector('button[type="submit"]');
+  const payload = montarPayload(form);
+  mostrarStatus(form, "Enviando solicitação...", "");
+  if (botao) botao.disabled = true;
+
+  try {
+    const res = await fetch("/api/oferta-vaga", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(mensagemErroApi(data));
+    }
+    mostrarStatus(form, data.mensagem || "Solicitação enviada com sucesso.", "ok");
+    form.reset();
+    aplicarTipoInscricao(form);
+    const descricao = form.querySelector("#descricao");
+    const contador = form.querySelector("#descricao-contador");
+    if (contador && descricao) contador.textContent = `${descricao.value.length}/300`;
+  } catch (error) {
+    mostrarStatus(
+      form,
+      error instanceof Error ? error.message : "Não foi possível enviar a solicitação.",
+      "erro"
+    );
+  } finally {
+    if (botao) botao.disabled = false;
+  }
+}
