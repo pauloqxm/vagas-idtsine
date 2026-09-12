@@ -34,9 +34,9 @@ const MUNICIPIOS_CE = [
 ];
 
 const TIPO_INSCRICAO = {
-  CNPJ: { max: 14, placeholder: "Informe o número do CNPJ" },
-  CPF: { max: 11, placeholder: "Informe o número do CPF" },
-  CEI: { max: 12, placeholder: "Informe o número do CEI" },
+  cnpj: { max: 14, placeholder: "Informe o número do CNPJ" },
+  cpf: { max: 11, placeholder: "Informe o número do CPF" },
+  cei: { max: 12, placeholder: "Informe o número do CEI" },
 };
 
 function somenteDigitos(valor) {
@@ -64,9 +64,9 @@ function preencherMunicipios(select) {
 }
 
 function aplicarTipoInscricao(form) {
-  const tipo = form.querySelector('input[name="tipo-cadastro"]:checked')?.value || "CNPJ";
-  const config = TIPO_INSCRICAO[tipo] || TIPO_INSCRICAO.CNPJ;
-  const campo = form.querySelector("#numero-inscricao");
+  const tipo = form.querySelector('input[name="tipoCadastro"]:checked')?.value || "cnpj";
+  const config = TIPO_INSCRICAO[tipo] || TIPO_INSCRICAO.cnpj;
+  const campo = form.querySelector("#numero");
   campo.maxLength = config.max;
   campo.placeholder = config.placeholder;
   campo.value = somenteDigitos(campo.value).slice(0, config.max);
@@ -79,13 +79,13 @@ document.addEventListener("DOMContentLoaded", () => {
   preencherMunicipios(form.querySelector("#municipio"));
   aplicarTipoInscricao(form);
 
-  form.querySelectorAll('input[name="tipo-cadastro"]').forEach((radio) => {
+  form.querySelectorAll('input[name="tipoCadastro"]').forEach((radio) => {
     radio.addEventListener("change", () => aplicarTipoInscricao(form));
   });
 
-  form.querySelector("#numero-inscricao").addEventListener("input", (event) => {
-    const tipo = form.querySelector('input[name="tipo-cadastro"]:checked')?.value || "CNPJ";
-    const max = (TIPO_INSCRICAO[tipo] || TIPO_INSCRICAO.CNPJ).max;
+  form.querySelector("#numero").addEventListener("input", (event) => {
+    const tipo = form.querySelector('input[name="tipoCadastro"]:checked')?.value || "cnpj";
+    const max = (TIPO_INSCRICAO[tipo] || TIPO_INSCRICAO.cnpj).max;
     event.target.value = somenteDigitos(event.target.value).slice(0, max);
   });
 
@@ -97,23 +97,17 @@ document.addEventListener("DOMContentLoaded", () => {
     event.target.value = mascaraCelular(event.target.value);
   });
 
-  form.querySelector("#quantidade").addEventListener("input", (event) => {
+  form.querySelector("#qtdeVaga").addEventListener("input", (event) => {
     event.target.value = somenteDigitos(event.target.value).slice(0, 3);
   });
 
-  const descricao = form.querySelector("#descricao");
+  const descricao = form.querySelector("#descricaoVaga");
   const contador = form.querySelector("#descricao-contador");
   const atualizarContador = () => {
     if (contador) contador.textContent = `${descricao.value.length}/300`;
   };
   descricao.addEventListener("input", atualizarContador);
   atualizarContador();
-
-  const tipoVaga = form.querySelector("#tipo-vaga");
-  const vagaPcd = form.querySelector("#vaga-pcd");
-  tipoVaga?.addEventListener("change", () => {
-    if (tipoVaga.value === "PCD" && vagaPcd) vagaPcd.checked = true;
-  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -137,25 +131,28 @@ function mostrarStatus(form, mensagem, tipo) {
   if (tipo) status.classList.add(`offer-status--${tipo}`);
 }
 
+function valorCampo(form, nome) {
+  return String(form.elements.namedItem(nome)?.value || "").trim();
+}
+
 function montarPayload(form) {
-  const tipo = (form.querySelector('input[name="tipo-cadastro"]:checked')?.value || "CNPJ").toLowerCase();
   return {
     empresa: {
-      tipoCadastro: tipo,
-      numero: somenteDigitos(form.querySelector("#numero-inscricao")?.value),
-      nomeEmpresa: form.querySelector("#nome-fantasia")?.value.trim() || "",
-      contato: form.querySelector("#contato")?.value.trim() || "",
-      email: form.querySelector("#email")?.value.trim() || "",
-      telefone: form.querySelector("#telefone")?.value.trim() || "",
-      celular: form.querySelector("#celular")?.value.trim() || "",
-      municipio: form.querySelector("#municipio")?.value.trim() || "",
+      tipoCadastro: valorCampo(form, "tipoCadastro").toLowerCase(),
+      numero: valorCampo(form, "numero"),
+      nomeEmpresa: valorCampo(form, "nomeEmpresa"),
+      contato: valorCampo(form, "contato"),
+      email: valorCampo(form, "email"),
+      telefone: valorCampo(form, "telefone"),
+      celular: valorCampo(form, "celular"),
+      municipio: valorCampo(form, "municipio"),
     },
     vaga: {
-      cargo: form.querySelector("#cargo")?.value.trim() || "",
-      tipoVaga: form.querySelector("#tipo-vaga")?.value.trim() || "GERAL",
-      descricaoVaga: form.querySelector("#descricao")?.value.trim() || "",
-      qtdeVaga: Number(somenteDigitos(form.querySelector("#quantidade")?.value)) || 0,
-      pcd: Boolean(form.querySelector("#vaga-pcd")?.checked || form.querySelector("#tipo-vaga")?.value === "PCD"),
+      cargo: valorCampo(form, "cargo"),
+      tipoVaga: valorCampo(form, "tipoVaga"),
+      descricaoVaga: valorCampo(form, "descricaoVaga"),
+      qtdeVaga: Number(somenteDigitos(valorCampo(form, "qtdeVaga"))) || 0,
+      pcd: Boolean(form.elements.namedItem("pcd")?.checked),
     },
   };
 }
@@ -179,7 +176,7 @@ async function enviarOferta(form) {
     mostrarStatus(form, data.mensagem || "Solicitação enviada com sucesso.", "ok");
     form.reset();
     aplicarTipoInscricao(form);
-    const descricao = form.querySelector("#descricao");
+    const descricao = form.querySelector("#descricaoVaga");
     const contador = form.querySelector("#descricao-contador");
     if (contador && descricao) contador.textContent = `${descricao.value.length}/300`;
   } catch (error) {

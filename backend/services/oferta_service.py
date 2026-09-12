@@ -55,7 +55,7 @@ def montar_payload(body: Dict[str, Any]) -> Dict[str, Any]:
     telefone = _texto(empresa_in.get("telefone"), 20)
     cargo = _texto(vaga_in.get("cargo"), 120)
     descricao = _texto(vaga_in.get("descricaoVaga"), 300)
-    tipo_vaga = _texto(vaga_in.get("tipoVaga"), 40) or "GERAL"
+    tipo_vaga = _texto(vaga_in.get("tipoVaga"), 40)
 
     if not nome:
         raise ValueError("Informe o nome da empresa.")
@@ -69,6 +69,8 @@ def montar_payload(body: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("Informe o celular com DDD.")
     if not cargo:
         raise ValueError("Informe o cargo.")
+    if not tipo_vaga:
+        raise ValueError("Informe o tipo da vaga.")
     if not descricao:
         raise ValueError("Informe a descrição da vaga.")
 
