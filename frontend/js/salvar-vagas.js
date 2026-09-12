@@ -152,7 +152,7 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
             <td>${this.diasOfertadas(vaga)}</td>
-            <td><span class="print-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${this.escapeHtml(rotulo)}</span></td>
+            <td><span class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</span></td>
           </tr>
         `;
       })
@@ -349,7 +349,7 @@ const SalvarVagas = {
         width: 100%;
         border-collapse: collapse;
         font-size: 11px;
-        table-layout: auto;
+        table-layout: fixed;
       }
 
       .print-vagas-table th,
@@ -358,17 +358,46 @@ const SalvarVagas = {
         border: 0.4pt solid #e4eef5;
         text-align: left;
         vertical-align: top;
+      }
+
+      .print-vagas-table th:nth-child(1),
+      .print-vagas-table td:nth-child(1) {
+        width: 26%;
         word-break: break-word;
+        overflow-wrap: anywhere;
       }
 
       .print-vagas-table th:nth-child(2),
-      .print-vagas-table td:nth-child(2),
+      .print-vagas-table td:nth-child(2) {
+        width: 7%;
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      .print-vagas-table th:nth-child(3),
+      .print-vagas-table td:nth-child(3) {
+        width: 16%;
+        white-space: nowrap;
+      }
+
+      .print-vagas-table th:nth-child(4),
+      .print-vagas-table td:nth-child(4) {
+        width: 18%;
+        white-space: nowrap;
+      }
+
       .print-vagas-table th:nth-child(5),
       .print-vagas-table td:nth-child(5),
       .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
+        width: 11%;
+        white-space: nowrap;
+        text-align: center;
+      }
+
       .print-vagas-table th:nth-child(7),
       .print-vagas-table td:nth-child(7) {
+        width: 13%;
         white-space: nowrap;
         text-align: center;
       }
@@ -392,12 +421,20 @@ const SalvarVagas = {
         display: inline-block;
         padding: 1px 6px;
         border-radius: 999px;
-        background: #e8f7ef;
-        color: #008f4b;
         font-weight: 800;
       }
 
-      .print-pcd.is-pcd {
+      .print-pcd--regular {
+        background: #e8f7ef;
+        color: #008f4b;
+      }
+
+      .print-pcd--inclusiva {
+        background: #eaf3f8;
+        color: #003d68;
+      }
+
+      .print-pcd--exclusiva {
         background: #fff4ef;
         color: #d95415;
       }
