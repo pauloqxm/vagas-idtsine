@@ -162,7 +162,7 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
-            <td><span class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</span></td>
+            <td class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</td>
           </tr>
         `;
       })
@@ -363,7 +363,7 @@ const SalvarVagas = {
         width: 100%;
         border-collapse: collapse;
         font-size: 11px;
-        table-layout: fixed;
+        table-layout: auto;
       }
 
       .print-vagas-table th,
@@ -376,43 +376,34 @@ const SalvarVagas = {
 
       .print-vagas-table th:nth-child(1),
       .print-vagas-table td:nth-child(1) {
-        width: 26%;
         word-break: break-word;
         overflow-wrap: anywhere;
       }
 
       .print-vagas-table th:nth-child(2),
       .print-vagas-table td:nth-child(2) {
-        width: 7%;
         white-space: nowrap;
         text-align: center;
       }
 
       .print-vagas-table th:nth-child(3),
-      .print-vagas-table td:nth-child(3) {
-        width: 16%;
-        white-space: nowrap;
-      }
-
+      .print-vagas-table td:nth-child(3),
       .print-vagas-table th:nth-child(4),
       .print-vagas-table td:nth-child(4) {
-        width: 18%;
         white-space: nowrap;
       }
 
       .print-vagas-table th:nth-child(5),
       .print-vagas-table td:nth-child(5) {
-        width: 12%;
         white-space: nowrap;
         text-align: center;
       }
 
       .print-vagas-table th:nth-child(6),
       .print-vagas-table td:nth-child(6) {
-        width: 21%;
+        width: 1%;
         white-space: nowrap;
         text-align: center;
-        overflow: visible;
       }
 
       .print-vagas-table th {
@@ -431,9 +422,6 @@ const SalvarVagas = {
       }
 
       .print-pcd {
-        display: inline-block;
-        padding: 1px 7px;
-        border-radius: 999px;
         font-size: 10px;
         font-weight: 800;
         white-space: nowrap;
