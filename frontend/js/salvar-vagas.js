@@ -18,6 +18,17 @@ const SalvarVagas = {
     return new Date().toLocaleDateString("pt-BR");
   },
 
+  dataHoraHojeBR() {
+    const agora = new Date();
+    const data = agora.toLocaleDateString("pt-BR");
+    const hora = agora.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${data} ${hora}`;
+  },
+
   dataExibicao(valor) {
     if (typeof dataExibicao === "function") return dataExibicao(valor);
     const s = String(valor || "").trim();
@@ -151,7 +162,6 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
-            <td>${this.diasOfertadas(vaga)}</td>
             <td><span class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</span></td>
           </tr>
         `;
@@ -168,7 +178,6 @@ const SalvarVagas = {
               <th>Cidade</th>
               <th>Unidade</th>
               <th>Publicada</th>
-              <th>Dias ofertadas</th>
               <th>PCD</th>
             </tr>
           </thead>
@@ -367,42 +376,40 @@ const SalvarVagas = {
 
       .print-vagas-table th:nth-child(1),
       .print-vagas-table td:nth-child(1) {
-        width: 26%;
+        width: 30%;
         word-break: break-word;
         overflow-wrap: anywhere;
       }
 
       .print-vagas-table th:nth-child(2),
       .print-vagas-table td:nth-child(2) {
-        width: 7%;
+        width: 8%;
         white-space: nowrap;
         text-align: center;
       }
 
       .print-vagas-table th:nth-child(3),
       .print-vagas-table td:nth-child(3) {
-        width: 16%;
+        width: 18%;
         white-space: nowrap;
       }
 
       .print-vagas-table th:nth-child(4),
       .print-vagas-table td:nth-child(4) {
-        width: 18%;
+        width: 20%;
         white-space: nowrap;
       }
 
       .print-vagas-table th:nth-child(5),
-      .print-vagas-table td:nth-child(5),
-      .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6) {
-        width: 11%;
+      .print-vagas-table td:nth-child(5) {
+        width: 12%;
         white-space: nowrap;
         text-align: center;
       }
 
-      .print-vagas-table th:nth-child(7),
-      .print-vagas-table td:nth-child(7) {
-        width: 13%;
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
+        width: 12%;
         white-space: nowrap;
         text-align: center;
       }
@@ -597,6 +604,7 @@ const SalvarVagas = {
 
   montarDocumento({ municipio, vagas, totalVagas, totalInclusiva, totalPcd, unidades, logoSrc, formato }) {
     const data = this.dataHojeBR();
+    const geradoEm = this.dataHoraHojeBR();
     const logo =
       logoSrc ||
       "https://www.idt.org.br/assets/img/logos/logo_grande.png";
@@ -628,7 +636,7 @@ const SalvarVagas = {
         </div>
         <div class="print-header__meta">
           <div>Instituto de Desenvolvimento do Trabalho</div>
-          <div>Gerado em ${data}</div>
+          <div>Gerado em ${geradoEm}</div>
         </div>
       </div>
       <div class="print-units">

@@ -477,7 +477,6 @@ function renderLista() {
               <th scope="col">Cidade</th>
               <th scope="col">Unidade</th>
               <th scope="col">Publicada</th>
-              <th scope="col">Dias ofertadas</th>
               <th scope="col">PCD</th>
               <th scope="col">Ações</th>
             </tr>
@@ -574,7 +573,6 @@ function renderLinhaTabela(vaga) {
       <td data-label="Cidade">${escapeHtml(vaga.municipio || "Não informado")}</td>
       <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
       <td data-label="Publicada">${escapeHtml(dataExibicao(vaga.data_disponibilidade) || "—")}</td>
-      <td data-label="Dias ofertadas">${diasOfertadas(vaga)}</td>
       <td data-label="PCD"><span class="vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotulo)}</span></td>
       <td data-label="Ações">
         <div class="vagas-table-actions">
