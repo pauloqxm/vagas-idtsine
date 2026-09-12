@@ -516,11 +516,6 @@ function definirVisualizacao(modo) {
   renderLista();
 }
 
-function diasOfertadas(vaga) {
-  const valor = Number(vaga.dias_ofertadas);
-  return Number.isFinite(valor) && valor > 0 ? valor : 1;
-}
-
 function renderCard(vaga) {
   const categoria = categoriaPcd(vaga);
   const pcd =
@@ -546,7 +541,6 @@ function renderCard(vaga) {
       <div class="tag-row">
         ${pcd}
         ${vaga.data_disponibilidade ? `<span class="tag">Publicada em ${escapeHtml(dataExibicao(vaga.data_disponibilidade))}</span>` : ""}
-        <span class="tag tag-dias">Dias ofertadas: ${diasOfertadas(vaga)}</span>
       </div>
       <div class="vaga-actions">
         <button type="button" class="btn btn-primary" data-open-vaga="${vaga.id}" data-posto-atendimento="${escapeAttr(vaga.posto_atendimento || "")}">Ver detalhes</button>

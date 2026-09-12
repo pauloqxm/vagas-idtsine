@@ -9,11 +9,6 @@ const SalvarVagas = {
     return Number(vaga.qtde_vagas) || 1;
   },
 
-  diasOfertadas(vaga) {
-    const valor = Number(vaga.dias_ofertadas);
-    return Number.isFinite(valor) && valor > 0 ? valor : 1;
-  },
-
   dataHojeBR() {
     return new Date().toLocaleDateString("pt-BR");
   },
@@ -143,7 +138,6 @@ const SalvarVagas = {
                 ? `<span class="print-tag print-tag--data">Publicada em ${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade))}</span>`
                 : ""
             }
-            <span class="print-tag print-tag--dias">Dias ofertadas: ${this.diasOfertadas(vaga)}</span>
           </div>
         </div>
       </article>
