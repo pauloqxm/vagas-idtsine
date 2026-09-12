@@ -86,8 +86,9 @@ input {
 .site-shortcuts__inner {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 1rem;
-  padding: 0.45rem 0;
+  padding: 0.4rem 0;
 }
 
 .site-shortcuts__inner a {
@@ -101,6 +102,23 @@ input {
 .site-shortcuts__inner a:focus-visible {
   color: var(--idt-blue);
   text-decoration: underline;
+}
+
+.site-shortcuts__cta {
+  margin-left: auto;
+  padding: 0.38rem 0.95rem;
+  border-radius: 999px;
+  background: var(--idt-green);
+  color: #fff !important;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 168, 89, 0.22);
+}
+
+.site-shortcuts__cta:hover,
+.site-shortcuts__cta:focus-visible {
+  background: var(--idt-green-hover);
+  color: #fff !important;
+  text-decoration: none;
 }
 
 .topbar__inner {
