@@ -2,10 +2,11 @@ import csv
 import io
 import logging
 import os
+import re
 import time
 import unicodedata
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
@@ -39,6 +40,7 @@ UNIDADES_CACHE_TTL = 3600 # 1 h  — unidades mudam raramente
 # ── Caches em memória ─────────────────────────────────────────────────────────
 CACHE: Dict[str, Any] = {"data": None, "ultima_atualizacao": None, "timestamp": 0}
 _UNIDADES_CACHE: Dict[str, Any] = {"data": None, "timestamp": 0}
+_FORMATO_DATA_API: Optional[str] = None
 
 
 # ── Utilitários de parse ──────────────────────────────────────────────────────
@@ -69,29 +71,69 @@ def _parse_float_br(val: str) -> Optional[float]:
         return None
 
 
-def _parse_data_iso(val: str) -> str:
-    s = str(val or "").strip().split(".")[0]
+def _hoje_fortaleza() -> date:
+    return datetime.now(TZ_FORTALEZA).date()
+
+
+def _parse_data_qualquer(val: Any) -> Optional[date]:
+    """ISO YYYY-MM-DD é inequívoco; barras seguem o padrão BR (dd/mm/aaaa)."""
+    s = str(val or "").strip()
     if not s:
-        return ""
-    try:
-        dt = datetime.fromisoformat(s)
-        return dt.strftime("%d/%m/%Y")
-    except ValueError:
-        return s[:10] if len(s) >= 10 else ""
+        return None
+    s = s.split(".")[0].replace("T", " ").strip()
+
+    iso = re.match(r"^(\d{4})-(\d{2})-(\d{2})", s)
+    if iso:
+        try:
+            return date(int(iso.group(1)), int(iso.group(2)), int(iso.group(3)))
+        except ValueError:
+            return None
+
+    barra = re.match(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})", s)
+    if barra:
+        try:
+            return date(int(barra.group(3)), int(barra.group(2)), int(barra.group(1)))
+        except ValueError:
+            return None
+    return None
+
+
+def _parse_data_iso(val: str) -> str:
+    parsed = _parse_data_qualquer(val)
+    return parsed.strftime("%d/%m/%Y") if parsed else ""
 
 
 def _parse_datetime_iso(val: str) -> Optional[datetime]:
-    s = str(val or "").strip().split(".")[0]
-    if not s:
+    parsed = _parse_data_qualquer(val)
+    if not parsed:
         return None
-    try:
-        return datetime.fromisoformat(s)
-    except ValueError:
-        return None
+    return datetime(parsed.year, parsed.month, parsed.day, tzinfo=TZ_FORTALEZA)
 
 
 def _formatar_data_br(dt: datetime) -> str:
     return dt.strftime("%d/%m/%Y")
+
+
+def _data_ord(vaga: Dict[str, Any]) -> date:
+    return (
+        _parse_data_qualquer(vaga.get("data_disponibilidade") or vaga.get("data") or "")
+        or date.min
+    )
+
+
+def _qtde_api(item: Dict[str, Any]) -> int:
+    for chave in (
+        "quantidade",
+        "qtdeVagas",
+        "qtdVagas",
+        "quantidadeVagas",
+        "qtde",
+        "nroVagas",
+        "numeroVagas",
+    ):
+        if item.get(chave) not in (None, ""):
+            return _parse_int(item.get(chave))
+    return 1
 
 
 def _email_da_coluna_tipo(tipo_raw: str) -> str:
@@ -108,23 +150,49 @@ def _parse_bool(val: Any) -> bool:
     return s in {"1", "true", "sim", "yes"}
 
 
+def _texto_pcd(val: Any) -> str:
+    texto = unicodedata.normalize("NFD", str(val or ""))
+    texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
+    return texto.lower().strip()
+
+
 def _normalizar_pcd(val: Any) -> str:
     if isinstance(val, bool):
         return "exclusiva" if val else "regular"
     if isinstance(val, (int, float)):
         return "exclusiva" if int(val) == 1 else "regular"
-    texto = unicodedata.normalize("NFD", str(val or ""))
-    texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
-    texto = texto.lower().strip()
+    texto = _texto_pcd(val)
     if not texto:
         return "regular"
     if "exclusiv" in texto:
         return "exclusiva"
-    if "inclusiv" in texto:
+    if "inclusiv" in texto or "aceita pcd" in texto:
         return "inclusiva"
     if texto in {"1", "true", "sim", "yes"}:
         return "exclusiva"
     return "regular"
+
+
+def _categoria_pcd_item(item: Dict[str, Any]) -> str:
+    """A API manda `pcd` (texto) e `ehPcd` (exclusiva). 'Aceita PCD' é inclusiva."""
+    texto_bruto = next(
+        (
+            item.get(chave)
+            for chave in ("pcd", "tipoPcd", "perfilPcd", "categoriaPcd")
+            if item.get(chave) not in (None, "")
+        ),
+        "",
+    )
+    texto = _texto_pcd(texto_bruto)
+    if "exclusiv" in texto:
+        return "exclusiva"
+    if item.get("ehPcd") not in (None, "") and _parse_bool(item.get("ehPcd")):
+        return "exclusiva"
+    if "inclusiv" in texto or "aceita pcd" in texto:
+        return "inclusiva"
+    if texto in {"regular", "nao", "nao aceita", "nao aceita pcd", "nao pcd"}:
+        return "regular"
+    return _normalizar_pcd(texto_bruto if texto_bruto not in (None, "") else item.get("ehPcd"))
 
 
 def _api_key() -> str:
@@ -142,9 +210,9 @@ def _dias_historico() -> int:
         return 7
 
 
-def _datas_consulta() -> List[str]:
+def _datas_consulta() -> List[date]:
     hoje = datetime.now(TZ_FORTALEZA).date()
-    return [(hoje - timedelta(days=i)).strftime("%d/%m/%Y") for i in range(_dias_historico())]
+    return [hoje - timedelta(days=i) for i in range(_dias_historico())]
 
 
 # ── Fetch do Google Sheets ────────────────────────────────────────────────────
@@ -327,17 +395,8 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "data_disponibilidade": _parse_data_iso(str(item.get("dataDisponibilidade") or "")),
         "ocupacao": ocupacao,
         "codigo_cbo": _limpar_texto(item.get("codigo") or ""),
-        "qtde_vagas": _parse_int(item.get("quantidade") or "1"),
-        "pcd": _normalizar_pcd(
-            next(
-                (
-                    item.get(chave)
-                    for chave in ("pcd", "tipoPcd", "perfilPcd", "categoriaPcd", "ehPcd")
-                    if item.get(chave) not in (None, "")
-                ),
-                "",
-            )
-        ),
+        "qtde_vagas": _qtde_api(item),
+        "pcd": _categoria_pcd_item(item),
         "unidade": _limpar_texto(item.get("descricaoUnidade") or "") or info.get("unidade", ""),
         "posto_atendimento": posto,
         "municipio": info.get("municipio", ""),
@@ -369,15 +428,41 @@ def _extrair_lista_api(payload: Any) -> List[Dict[str, Any]]:
     return []
 
 
-def _buscar_vagas_api(data_br: str) -> List[Dict[str, Any]]:
+def _buscar_vagas_api(data_q: str) -> List[Dict[str, Any]]:
     resp = requests.get(
         _api_url(),
-        params={"data": data_br},
+        params={"data": data_q},
         headers={"x-api-key": _api_key(), "Accept": "application/json"},
         timeout=FETCH_TIMEOUT,
     )
     resp.raise_for_status()
     return _extrair_lista_api(resp.json())
+
+
+def _buscar_vagas_do_dia(dia: date) -> List[Dict[str, Any]]:
+    """Descobre se a API lê ISO, dd/mm ou mm/dd e reutiliza o formato que mais retorna."""
+    global _FORMATO_DATA_API
+    formatos = (
+        (_FORMATO_DATA_API,)
+        if _FORMATO_DATA_API
+        else ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y")
+    )
+    melhor: List[Dict[str, Any]] = []
+    melhor_fmt: Optional[str] = None
+    for fmt in formatos:
+        data_q = dia.strftime(fmt)
+        try:
+            itens = _buscar_vagas_api(data_q)
+        except Exception as exc:
+            logger.warning("Falha ao buscar vagas da API em %s (%s).", data_q, exc)
+            continue
+        if len(itens) > len(melhor):
+            melhor = itens
+            melhor_fmt = fmt
+    if melhor_fmt and _FORMATO_DATA_API is None:
+        _FORMATO_DATA_API = melhor_fmt
+        logger.info("Formato de data aceito pela API: %s", melhor_fmt)
+    return melhor
 
 
 def _ler_api() -> tuple[List[Dict[str, Any]], str]:
@@ -388,11 +473,10 @@ def _ler_api() -> tuple[List[Dict[str, Any]], str]:
     vagas: List[Dict[str, Any]] = []
     ultima_disponibilidade: Optional[datetime] = None
 
-    for data_br in _datas_consulta():
-        try:
-            itens = _buscar_vagas_api(data_br)
-        except Exception as exc:
-            logger.warning("Falha ao buscar vagas da API em %s (%s).", data_br, exc)
+    for dia in _datas_consulta():
+        itens = _buscar_vagas_do_dia(dia)
+        if not itens:
+            logger.warning("API de vagas não retornou registros em %s.", dia.isoformat())
             continue
         for item in itens:
             disponibilidade = _parse_datetime_iso(str(item.get("dataDisponibilidade") or ""))
@@ -447,12 +531,9 @@ def _deduplicar_vagas(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         atual = melhor.get(ident)
         if atual is None:
             melhor[ident] = vaga
-        else:
-            data_nova = str(vaga.get("data_disponibilidade") or vaga.get("data") or "")
-            data_atual = str(atual.get("data_disponibilidade") or atual.get("data") or "")
-            if data_nova > data_atual:
-                vaga["dias_ofertadas"] = atual["dias_ofertadas"]
-                melhor[ident] = vaga
+        elif _data_ord(vaga) >= _data_ord(atual):
+            vaga["dias_ofertadas"] = atual.get("dias_ofertadas") or 1
+            melhor[ident] = vaga
 
     return list(melhor.values()) + sem_ident
 
@@ -531,8 +612,10 @@ def get_municipios() -> List[str]:
 
 
 def invalidate_cache() -> None:
+    global _FORMATO_DATA_API
     CACHE["timestamp"] = 0
     CACHE["data"] = None
     CACHE["ultima_atualizacao"] = None
     _UNIDADES_CACHE["timestamp"] = 0
     _UNIDADES_CACHE["data"] = None
+    _FORMATO_DATA_API = None

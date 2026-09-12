@@ -57,6 +57,14 @@ const DetalhesVaga = {
     };
   },
 
+  dataExibicao(valor) {
+    if (typeof dataExibicao === "function") return dataExibicao(valor);
+    const s = String(valor || "").trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    return s;
+  },
+
   qtde(vaga) {
     return Number(vaga.qtde_vagas) || 1;
   },
@@ -88,7 +96,7 @@ const DetalhesVaga = {
         <div><strong>Cidade:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
         ${dados.endereco ? `<div><strong>Endereço:</strong> ${this.escapeHtml(dados.endereco)}</div>` : ""}
-        ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(dados.data_disponibilidade)}</div>` : ""}
+        ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(this.dataExibicao(dados.data_disponibilidade))}</div>` : ""}
         <div><strong>Dias ofertadas:</strong> ${this.diasOfertadas(dados)}</div>
         <div><strong>Perfil:</strong> ${this.escapeHtml(this.rotuloPcd(dados))}</div>
         ${
@@ -131,7 +139,9 @@ const DetalhesVaga = {
     if (texto.includes("exclusiv") || texto === "1" || texto === "true" || texto === "sim") {
       return "exclusiva";
     }
-    if (texto.includes("inclusiv")) return "inclusiva";
+    if (texto.includes("inclusiv") || texto.includes("aceita pcd")) {
+      return "inclusiva";
+    }
     return "regular";
   },
 

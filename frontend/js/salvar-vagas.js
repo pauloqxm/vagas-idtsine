@@ -18,6 +18,16 @@ const SalvarVagas = {
     return new Date().toLocaleDateString("pt-BR");
   },
 
+  dataExibicao(valor) {
+    if (typeof dataExibicao === "function") return dataExibicao(valor);
+    const s = String(valor || "").trim();
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    const partes = s.split("/");
+    if (partes.length === 3) return s;
+    return s;
+  },
+
   async obterLogoSrc() {
     if (this._logoDataUrl) return this._logoDataUrl;
 
@@ -119,7 +129,7 @@ const SalvarVagas = {
             }
             ${
               vaga.data_disponibilidade
-                ? `<span class="print-tag print-tag--data">Publicada em ${this.escapeHtml(vaga.data_disponibilidade)}</span>`
+                ? `<span class="print-tag print-tag--data">Publicada em ${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade))}</span>`
                 : ""
             }
             <span class="print-tag print-tag--dias">Dias ofertadas: ${this.diasOfertadas(vaga)}</span>
@@ -140,7 +150,7 @@ const SalvarVagas = {
             <td>${this.qtde(vaga)}</td>
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
-            <td>${this.escapeHtml(vaga.data_disponibilidade || "—")}</td>
+            <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
             <td>${this.diasOfertadas(vaga)}</td>
             <td><span class="print-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${this.escapeHtml(rotulo)}</span></td>
           </tr>

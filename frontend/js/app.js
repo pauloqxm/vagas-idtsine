@@ -61,13 +61,34 @@ function qtde(vaga) {
 }
 
 function parseDataBR(valor) {
-  const partes = String(valor || "").trim().split("/");
+  const s = String(valor || "").trim();
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const data = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+    data.setHours(0, 0, 0, 0);
+    return Number.isNaN(data.getTime()) ? null : data;
+  }
+
+  const partes = s.split(/[/-]/);
   if (partes.length !== 3) return null;
   const [dia, mes, ano] = partes.map(Number);
   if (!dia || !mes || !ano) return null;
   const data = new Date(ano, mes - 1, dia);
   data.setHours(0, 0, 0, 0);
+  if (Number.isNaN(data.getTime())) return null;
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  if (data > hoje && dia <= 12) {
+    const trocada = new Date(ano, dia - 1, mes);
+    trocada.setHours(0, 0, 0, 0);
+    if (!Number.isNaN(trocada.getTime()) && trocada <= hoje) return trocada;
+  }
   return data;
+}
+
+function dataExibicao(valor) {
+  return formatarDataBR(parseDataBR(valor)) || String(valor || "").trim();
 }
 
 function diffDias(a, b) {
@@ -534,7 +555,7 @@ function renderCard(vaga) {
       </div>
       <div class="tag-row">
         ${pcd}
-        ${vaga.data_disponibilidade ? `<span class="tag">Publicada em ${escapeHtml(vaga.data_disponibilidade)}</span>` : ""}
+        ${vaga.data_disponibilidade ? `<span class="tag">Publicada em ${escapeHtml(dataExibicao(vaga.data_disponibilidade))}</span>` : ""}
         <span class="tag tag-dias">Dias ofertadas: ${diasOfertadas(vaga)}</span>
       </div>
       <div class="vaga-actions">
@@ -561,7 +582,7 @@ function renderLinhaTabela(vaga) {
       <td data-label="Qtde">${qtde(vaga)}</td>
       <td data-label="Cidade">${escapeHtml(vaga.municipio || "Não informado")}</td>
       <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
-      <td data-label="Publicada">${escapeHtml(vaga.data_disponibilidade || "—")}</td>
+      <td data-label="Publicada">${escapeHtml(dataExibicao(vaga.data_disponibilidade) || "—")}</td>
       <td data-label="Dias ofertadas">${diasOfertadas(vaga)}</td>
       <td data-label="PCD"><span class="vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotulo)}</span></td>
       <td data-label="Ações">
