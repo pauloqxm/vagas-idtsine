@@ -116,7 +116,12 @@ def _formatar_data_br(dt: datetime) -> str:
 
 def _data_ord(vaga: Dict[str, Any]) -> date:
     return (
-        _parse_data_qualquer(vaga.get("data_disponibilidade") or vaga.get("data") or "")
+        _parse_data_qualquer(
+            vaga.get("data_consulta")
+            or vaga.get("data_disponibilidade")
+            or vaga.get("data")
+            or ""
+        )
         or date.min
     )
 
@@ -440,15 +445,13 @@ def _buscar_vagas_api(data_q: str) -> List[Dict[str, Any]]:
 
 
 def _buscar_vagas_do_dia(dia: date) -> List[Dict[str, Any]]:
-    """Descobre se a API lê ISO, dd/mm ou mm/dd e reutiliza o formato que mais retorna."""
+    """Tenta ISO, depois dd/mm; não mistura mm/dd se um formato já trouxe o dia certo."""
     global _FORMATO_DATA_API
     formatos = (
         (_FORMATO_DATA_API,)
         if _FORMATO_DATA_API
         else ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y")
     )
-    melhor: List[Dict[str, Any]] = []
-    melhor_fmt: Optional[str] = None
     for fmt in formatos:
         data_q = dia.strftime(fmt)
         try:
@@ -456,13 +459,12 @@ def _buscar_vagas_do_dia(dia: date) -> List[Dict[str, Any]]:
         except Exception as exc:
             logger.warning("Falha ao buscar vagas da API em %s (%s).", data_q, exc)
             continue
-        if len(itens) > len(melhor):
-            melhor = itens
-            melhor_fmt = fmt
-    if melhor_fmt and _FORMATO_DATA_API is None:
-        _FORMATO_DATA_API = melhor_fmt
-        logger.info("Formato de data aceito pela API: %s", melhor_fmt)
-    return melhor
+        if itens:
+            if _FORMATO_DATA_API is None:
+                _FORMATO_DATA_API = fmt
+                logger.info("Formato de data aceito pela API: %s", fmt)
+            return itens
+    return []
 
 
 def _ler_api() -> tuple[List[Dict[str, Any]], str]:
@@ -471,29 +473,29 @@ def _ler_api() -> tuple[List[Dict[str, Any]], str]:
         raise RuntimeError("VAGAS_IMO_API_KEY não configurada")
 
     vagas: List[Dict[str, Any]] = []
-    ultima_disponibilidade: Optional[datetime] = None
+    dias_ok: List[date] = []
 
     for dia in _datas_consulta():
         itens = _buscar_vagas_do_dia(dia)
         if not itens:
             logger.warning("API de vagas não retornou registros em %s.", dia.isoformat())
             continue
+        dias_ok.append(dia)
+        data_consulta = dia.strftime("%d/%m/%Y")
         for item in itens:
-            disponibilidade = _parse_datetime_iso(str(item.get("dataDisponibilidade") or ""))
-            if disponibilidade and (
-                ultima_disponibilidade is None or disponibilidade > ultima_disponibilidade
-            ):
-                ultima_disponibilidade = disponibilidade
             vaga = _item_api_para_vaga(item)
-            if vaga:
-                vagas.append(vaga)
+            if not vaga:
+                continue
+            vaga["data_consulta"] = data_consulta
+            vaga["data_disponibilidade"] = data_consulta
+            vagas.append(vaga)
 
     if not vagas:
         raise RuntimeError("API de vagas não retornou registros")
 
     ultima_atualizacao = (
-        _formatar_data_br(ultima_disponibilidade)
-        if ultima_disponibilidade
+        max(dias_ok).strftime("%d/%m/%Y")
+        if dias_ok
         else datetime.now(TZ_FORTALEZA).strftime("%d/%m/%Y")
     )
     return vagas, ultima_atualizacao
@@ -506,7 +508,9 @@ def _enriquecer_dias_ofertadas(vagas: List[Dict[str, Any]]) -> None:
         ident = str(vaga.get("identificacao_vagas") or "").strip()
         if not ident:
             continue
-        data_listagem = str(vaga.get("data_disponibilidade") or vaga.get("data") or "").strip()
+        data_listagem = str(
+            vaga.get("data_consulta") or vaga.get("data_disponibilidade") or vaga.get("data") or ""
+        ).strip()
         if data_listagem:
             datas_por_ident[ident].add(data_listagem)
 
@@ -538,6 +542,14 @@ def _deduplicar_vagas(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return list(melhor.values()) + sem_ident
 
 
+def _manter_extrato_mais_recente(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """O histórico só serve para dias_ofertadas; totais usam um único extrato."""
+    if not vagas:
+        return vagas
+    alvo = max(_data_ord(vaga) for vaga in vagas)
+    return [vaga for vaga in vagas if _data_ord(vaga) == alvo]
+
+
 # ── API pública ───────────────────────────────────────────────────────────────
 
 def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
@@ -552,12 +564,17 @@ def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
     try:
         vagas, ultima_atualizacao = _ler_api()
         _enriquecer_dias_ofertadas(vagas)
+        vagas = _manter_extrato_mais_recente(vagas)
         vagas = _deduplicar_vagas(vagas)
 
         CACHE["data"] = vagas
         CACHE["ultima_atualizacao"] = ultima_atualizacao
         CACHE["timestamp"] = now
-        logger.info("Vagas carregadas da API: %d registros únicos.", len(vagas))
+        logger.info(
+            "Vagas carregadas da API: %d registros do extrato %s.",
+            len(vagas),
+            ultima_atualizacao,
+        )
         return vagas
 
     except Exception as exc:

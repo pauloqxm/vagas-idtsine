@@ -98,16 +98,7 @@ function parseDataBR(valor) {
   if (!dia || !mes || !ano) return null;
   const data = new Date(ano, mes - 1, dia);
   data.setHours(0, 0, 0, 0);
-  if (Number.isNaN(data.getTime())) return null;
-
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  if (data > hoje && dia <= 12) {
-    const trocada = new Date(ano, dia - 1, mes);
-    trocada.setHours(0, 0, 0, 0);
-    if (!Number.isNaN(trocada.getTime()) && trocada <= hoje) return trocada;
-  }
-  return data;
+  return Number.isNaN(data.getTime()) ? null : data;
 }
 
 function dataExibicao(valor) {
