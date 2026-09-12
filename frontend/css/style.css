@@ -2703,8 +2703,9 @@ body.map-popup-open {
 }
 
 .servico-tile__icon svg {
-  width: 40px;
-  height: 40px;
+  display: block;
+  width: 42px;
+  height: 42px;
 }
 
 .servico-tile__body {
@@ -2759,6 +2760,16 @@ body.map-popup-open {
 .empresa-contato__desc {
   margin: 0.4rem 0 0;
   color: var(--muted);
+}
+
+.empresa-contato__alerta {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: var(--idt-orange-soft);
+  color: #9a3d0f;
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 .empresa-contato__lead {

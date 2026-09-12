@@ -1,9 +1,4 @@
 const SERVICOS_EMPRESA = {
-  intermediacao: {
-    titulo: "Intermediação de vagas",
-    descricao:
-      "Cadastro de vagas pela empresa e encaminhamento de candidatos pré-selecionados para entrevistas.",
-  },
   salas: {
     titulo: "Sala para entrevistas",
     descricao:
