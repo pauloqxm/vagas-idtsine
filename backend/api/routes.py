@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
 from backend.services import oferta_service, regioes_service, unidades_service, vagas_service
@@ -61,7 +61,7 @@ def regioes_paleta():
 
 
 @router.post("/oferta-vaga")
-def criar_oferta_vaga(body: dict):
+def criar_oferta_vaga(body: dict = Body(...)):
     try:
         payload = oferta_service.montar_payload(body or {})
         status, resposta = oferta_service.enviar_oferta(payload)

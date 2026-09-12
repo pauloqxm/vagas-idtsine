@@ -136,25 +136,26 @@ function valorCampo(form, nome) {
 }
 
 function montarPayload(form) {
-  return {
-    empresa: {
-      tipoCadastro: valorCampo(form, "tipoCadastro").toLowerCase(),
-      numero: valorCampo(form, "numero"),
-      nomeEmpresa: valorCampo(form, "nomeEmpresa"),
-      contato: valorCampo(form, "contato"),
-      email: valorCampo(form, "email"),
-      telefone: valorCampo(form, "telefone"),
-      celular: valorCampo(form, "celular"),
-      municipio: valorCampo(form, "municipio"),
-    },
-    vaga: {
-      cargo: valorCampo(form, "cargo"),
-      tipoVaga: valorCampo(form, "tipoVaga"),
-      descricaoVaga: valorCampo(form, "descricaoVaga"),
-      qtdeVaga: Number(somenteDigitos(valorCampo(form, "qtdeVaga"))) || 0,
-      pcd: Boolean(form.elements.namedItem("pcd")?.checked),
-    },
+  const celular = valorCampo(form, "celular");
+  const telefone = valorCampo(form, "telefone") || celular;
+  const empresa = {
+    tipoCadastro: valorCampo(form, "tipoCadastro").toLowerCase(),
+    numero: valorCampo(form, "numero"),
+    nomeEmpresa: valorCampo(form, "nomeEmpresa"),
+    contato: valorCampo(form, "contato"),
+    email: valorCampo(form, "email"),
+    telefone,
+    celular,
+    municipio: valorCampo(form, "municipio"),
   };
+  const vaga = {
+    cargo: valorCampo(form, "cargo"),
+    tipoVaga: valorCampo(form, "tipoVaga"),
+    descricaoVaga: valorCampo(form, "descricaoVaga"),
+    qtdeVaga: Number(somenteDigitos(valorCampo(form, "qtdeVaga"))) || 0,
+    pcd: Boolean(form.elements.namedItem("pcd")?.checked),
+  };
+  return { empresa, vaga, ...empresa, ...vaga };
 }
 
 async function enviarOferta(form) {
