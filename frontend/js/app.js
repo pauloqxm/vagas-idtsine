@@ -212,6 +212,13 @@ function popularFiltrosSuspensos() {
 
 function aplicarFiltrosDaURL() {
   const params = new URLSearchParams(window.location.search);
+  const termo = String(params.get("q") || params.get("cargo") || "").trim();
+  if (termo && els.cargo) {
+    els.cargo.value = termo;
+    state.filtros.cargo = termo;
+    state.filtros.dataPeriodo = "mais-recente";
+  }
+
   const municipioParam = String(params.get("municipio") || "").trim();
   if (municipioParam && els.municipio) {
     const match = [...els.municipio.options].find(
@@ -661,6 +668,17 @@ function bindEvents() {
     document.getElementById("resultados").scrollIntoView({ behavior: "smooth" });
   });
 
+  document.querySelector(".site-search")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = event.currentTarget.querySelector("input[type='search']");
+    const termo = String(input?.value || "").trim();
+    if (els.cargo) els.cargo.value = termo;
+    state.filtros.cargo = termo;
+    state.filtros.dataPeriodo = "mais-recente";
+    aplicarFiltros();
+    document.getElementById("resultados")?.scrollIntoView({ behavior: "smooth" });
+  });
+
   [
     { select: els.unidade, tipo: "unidades" },
     { select: els.municipio, tipo: "cidades" },
@@ -724,6 +742,9 @@ async function init() {
     aplicarFiltrosDaURL();
     renderPopulares();
     aplicarFiltros();
+    if (state.filtros.cargo) {
+      document.getElementById("resultados")?.scrollIntoView();
+    }
   } catch (error) {
     console.error(error);
     els.status.textContent =
