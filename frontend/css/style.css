@@ -577,12 +577,54 @@ h1 {
 }
 
 .kpi-card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem 1.1rem;
   box-shadow: 0 6px 20px rgba(0, 61, 104, 0.06);
   text-align: center;
+}
+
+.kpi-info {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.5rem;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #eaf3f8;
+  color: var(--idt-blue);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-style: italic;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.kpi-card--pcd .kpi-info {
+  background: var(--idt-orange-soft);
+  color: var(--idt-orange-hover);
+}
+
+.kpi-dica {
+  position: absolute;
+  top: 2.15rem;
+  right: 0.45rem;
+  z-index: 5;
+  width: min(250px, calc(100% - 0.9rem));
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
 }
 
 .kpi-card--pcd {

@@ -652,6 +652,34 @@ function limparBusca() {
   els.cargo.focus();
 }
 
+function ligarDicasKpi() {
+  const botoes = [...document.querySelectorAll(".kpi-info")];
+  if (!botoes.length) return;
+
+  const fecharTodas = () => {
+    document.querySelectorAll(".kpi-dica").forEach((el) => el.classList.add("hidden"));
+    botoes.forEach((btn) => btn.setAttribute("aria-expanded", "false"));
+  };
+
+  botoes.forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const dica = document.getElementById(btn.getAttribute("aria-controls"));
+      const jaAberta = dica && !dica.classList.contains("hidden");
+      fecharTodas();
+      if (!jaAberta && dica) {
+        dica.classList.remove("hidden");
+        btn.setAttribute("aria-expanded", "true");
+      }
+    });
+  });
+
+  document.addEventListener("click", fecharTodas);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") fecharTodas();
+  });
+}
+
 function bindEvents() {
   const aplicarFiltrosDaTela = () => {
     state.filtros.cargo = els.cargo.value.trim();
@@ -710,6 +738,7 @@ function bindEvents() {
 
   els.compartilhar?.addEventListener("click", compartilharVagasMunicipio);
 
+  ligarDicasKpi();
   els.limpar.addEventListener("click", limparBusca);
   document.querySelector(".modal__close").addEventListener("click", fecharModal);
   document.querySelector(".modal__backdrop").addEventListener("click", fecharModal);
