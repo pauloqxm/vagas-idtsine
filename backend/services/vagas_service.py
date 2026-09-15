@@ -38,7 +38,7 @@ CACHE_TTL = 300           # 5 min — vagas
 UNIDADES_CACHE_TTL = 3600 # 1 h  — unidades mudam raramente
 
 # ── Caches em memória ─────────────────────────────────────────────────────────
-CACHE: Dict[str, Any] = {"data": None, "ultima_atualizacao": None, "timestamp": 0}
+CACHE: Dict[str, Any] = {"data": None, "ultima_atualizacao": None, "edicao_postagem": "", "timestamp": 0}
 _UNIDADES_CACHE: Dict[str, Any] = {"data": None, "timestamp": 0}
 _FORMATO_DATA_API: Optional[str] = None
 
@@ -419,6 +419,7 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "tipo_contratacao": _limpar_texto(item.get("tipoVaga") or ""),
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),
+        "edicao_postagem": _normalizar_edicao_postagem(item.get("edicaoPostagem")),
     }
 
 
@@ -542,6 +543,46 @@ def _deduplicar_vagas(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return list(melhor.values()) + sem_ident
 
 
+def _normalizar_edicao_postagem(val: Any) -> str:
+    texto = _texto_pcd(val)
+    if "tarde" in texto:
+        return "Tarde"
+    if "manh" in texto:
+        return "Manhã"
+    return ""
+
+
+def _turno_vigente(data_extrato: date) -> str:
+    """Turno a exibir: Tarde a partir das 12h; no dia seguinte, Tarde do último extrato."""
+    hoje = _hoje_fortaleza()
+    if data_extrato < hoje:
+        return "Tarde"
+    agora = datetime.now(TZ_FORTALEZA)
+    return "Tarde" if agora.hour >= 12 else "Manhã"
+
+
+def _filtrar_edicao_postagem(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """No extrato mais recente, usa um único turno (Manhã ou Tarde).
+
+    Se a data mais recente é hoje, mostra o turno vigente.
+    No dia seguinte, antes dos dados novos, permanece a Tarde do último extrato.
+    """
+    if not vagas:
+        return vagas
+
+    data_extrato = max(_data_ord(vaga) for vaga in vagas)
+    desejado = _turno_vigente(data_extrato)
+    selecionadas = [vaga for vaga in vagas if vaga.get("edicao_postagem") == desejado]
+    if selecionadas:
+        return selecionadas
+
+    if desejado == "Tarde":
+        manha = [vaga for vaga in vagas if vaga.get("edicao_postagem") == "Manhã"]
+        if manha:
+            return manha
+    return vagas
+
+
 def _manter_extrato_mais_recente(vagas: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """O histórico só serve para dias_ofertadas; totais usam um único extrato."""
     if not vagas:
@@ -565,15 +606,19 @@ def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
         vagas, ultima_atualizacao = _ler_api()
         _enriquecer_dias_ofertadas(vagas)
         vagas = _manter_extrato_mais_recente(vagas)
+        vagas = _filtrar_edicao_postagem(vagas)
         vagas = _deduplicar_vagas(vagas)
 
+        edicao = next((str(vaga.get("edicao_postagem") or "") for vaga in vagas if vaga.get("edicao_postagem")), "")
         CACHE["data"] = vagas
         CACHE["ultima_atualizacao"] = ultima_atualizacao
+        CACHE["edicao_postagem"] = edicao
         CACHE["timestamp"] = now
         logger.info(
-            "Vagas carregadas da API: %d registros do extrato %s.",
+            "Vagas carregadas da API: %d registros do extrato %s (%s).",
             len(vagas),
             ultima_atualizacao,
+            edicao or "turno não informado",
         )
         return vagas
 
@@ -590,6 +635,7 @@ def get_payload_vagas() -> Dict[str, Any]:
         "vagas": vagas,
         "total": len(vagas),
         "ultima_atualizacao": str(CACHE.get("ultima_atualizacao") or ""),
+        "edicao_postagem": str(CACHE.get("edicao_postagem") or ""),
         "atualizado_em": datetime.now(timezone.utc).isoformat(),
     }
 
