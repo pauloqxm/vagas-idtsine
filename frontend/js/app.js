@@ -34,6 +34,7 @@ function cacheEls() {
   els.modalBody = document.getElementById("modal-body");
   els.popularList = document.getElementById("popular-list");
   els.popularTabs = document.querySelectorAll("[data-popular-tab]");
+  els.kpiTotal = document.getElementById("kpi-vagas-total");
   els.kpiRegulares = document.getElementById("kpi-vagas-regulares");
   els.kpiInclusiva = document.getElementById("kpi-vagas-inclusiva");
   els.kpiExclusiva = document.getElementById("kpi-vagas-exclusiva");
@@ -275,6 +276,7 @@ function calcularKPIs() {
 
 function atualizarKPIs() {
   const { regulares, inclusiva, exclusiva } = calcularKPIs();
+  if (els.kpiTotal) els.kpiTotal.textContent = String(regulares + inclusiva + exclusiva);
   if (els.kpiRegulares) els.kpiRegulares.textContent = String(regulares);
   if (els.kpiInclusiva) els.kpiInclusiva.textContent = String(inclusiva);
   if (els.kpiExclusiva) els.kpiExclusiva.textContent = String(exclusiva);
