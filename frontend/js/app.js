@@ -281,12 +281,12 @@ function totalVagasQuantidades() {
 }
 
 function totalOcupacoesUnicas() {
-  const codigos = new Set();
+  const ocupacoes = new Set();
   state.filtradas.forEach((vaga) => {
-    const codigo = String(vaga.codigo_cbo || "").trim();
-    if (codigo) codigos.add(codigo);
+    const nome = String(vaga.ocupacao || "").trim();
+    if (nome) ocupacoes.add(normalizar(nome));
   });
-  return codigos.size;
+  return ocupacoes.size;
 }
 
 function calcularKPIs() {
