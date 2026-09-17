@@ -485,7 +485,6 @@ function aplicarBuscaPopular(valor) {
 
 function renderLista() {
   atualizarBotoesVisualizacao();
-  atualizarLayoutResultados();
 
   if (state.filtradas.length === 0) {
     els.lista.className = "cards";
@@ -547,13 +546,6 @@ function atualizarBotoesVisualizacao() {
     btn.classList.toggle("is-active", ativo);
     btn.setAttribute("aria-pressed", ativo ? "true" : "false");
   });
-}
-
-function atualizarLayoutResultados() {
-  const layout = document.getElementById("resultados");
-  if (!layout) return;
-  const tabelaAtiva = state.viewMode === "table" && state.filtradas.length > 0;
-  layout.classList.toggle("results-layout--table", tabelaAtiva);
 }
 
 function definirVisualizacao(modo) {

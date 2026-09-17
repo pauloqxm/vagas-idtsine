@@ -840,14 +840,6 @@ h1 {
   min-width: 0;
 }
 
-.results-layout--table {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.results-layout--table .help-card {
-  display: none;
-}
-
 .help-card,
 .vaga-card,
 .empty-card {
