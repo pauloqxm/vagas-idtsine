@@ -374,8 +374,10 @@ const SalvarVagas = {
 
       .print-vagas-table th:nth-child(1),
       .print-vagas-table td:nth-child(1) {
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
       }
 
       .print-vagas-table th:nth-child(2),
@@ -385,16 +387,12 @@ const SalvarVagas = {
       }
 
       .print-vagas-table th:nth-child(3),
-      .print-vagas-table td:nth-child(3) {
-        white-space: nowrap;
-      }
-
+      .print-vagas-table td:nth-child(3),
       .print-vagas-table th:nth-child(4),
       .print-vagas-table td:nth-child(4),
       .print-vagas-table th:nth-child(5),
       .print-vagas-table td:nth-child(5) {
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        white-space: nowrap;
       }
 
       .print-vagas-table th:nth-child(6),
