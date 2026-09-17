@@ -95,6 +95,8 @@ const DetalhesVaga = {
         <div><strong>Quantidade:</strong> ${this.qtde(dados)} vaga(s)</div>
         <div><strong>Cidade:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
+        <div><strong>Escolaridade:</strong> ${this.escapeHtml(String(dados.escolaridade || "").trim() || "Não informado")}</div>
+        <div><strong>Contratação:</strong> ${this.escapeHtml(String(dados.tipo_contratacao || "").trim() || "Não informado")}</div>
         ${dados.endereco ? `<div><strong>Endereço:</strong> ${this.escapeHtml(dados.endereco)}</div>` : ""}
         ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(this.dataExibicao(dados.data_disponibilidade))}</div>` : ""}
         <div><strong>Dias ofertadas:</strong> ${this.diasOfertadas(dados)}</div>
@@ -128,7 +130,7 @@ const DetalhesVaga = {
   avisoAgendamento: "O agendamento não assegura a vaga, vá até a unidade agendada.",
 
   categoriaPcd(vaga) {
-    const raw = vaga && vaga.pcd;
+    const raw = vaga && (vaga.pcd || vaga.direcionamento);
     if (raw === true) return "exclusiva";
     if (raw === false) return "regular";
     const texto = String(raw || "")
@@ -141,6 +143,9 @@ const DetalhesVaga = {
     }
     if (texto.includes("inclusiv") || texto.includes("aceita pcd")) {
       return "inclusiva";
+    }
+    if (texto.includes("regular")) {
+      return "regular";
     }
     return "regular";
   },

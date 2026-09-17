@@ -179,11 +179,17 @@ def _normalizar_pcd(val: Any) -> str:
 
 
 def _categoria_pcd_item(item: Dict[str, Any]) -> str:
-    """A API manda `pcd` (texto) e `ehPcd` (exclusiva). 'Aceita PCD' é inclusiva."""
+    """A API atual manda `direcionamento`; o contrato antigo usava `pcd` + `ehPcd`."""
     texto_bruto = next(
         (
             item.get(chave)
-            for chave in ("pcd", "tipoPcd", "perfilPcd", "categoriaPcd")
+            for chave in (
+                "direcionamento",
+                "pcd",
+                "tipoPcd",
+                "perfilPcd",
+                "categoriaPcd",
+            )
             if item.get(chave) not in (None, "")
         ),
         "",
@@ -191,11 +197,13 @@ def _categoria_pcd_item(item: Dict[str, Any]) -> str:
     texto = _texto_pcd(texto_bruto)
     if "exclusiv" in texto:
         return "exclusiva"
-    if item.get("ehPcd") not in (None, "") and _parse_bool(item.get("ehPcd")):
-        return "exclusiva"
     if "inclusiv" in texto or "aceita pcd" in texto:
         return "inclusiva"
-    if texto in {"regular", "nao", "nao aceita", "nao aceita pcd", "nao pcd"}:
+    if "regular" in texto:
+        return "regular"
+    if item.get("ehPcd") not in (None, "") and _parse_bool(item.get("ehPcd")):
+        return "exclusiva"
+    if texto in {"nao", "nao aceita", "nao aceita pcd", "nao pcd"}:
         return "regular"
     return _normalizar_pcd(texto_bruto if texto_bruto not in (None, "") else item.get("ehPcd"))
 
@@ -416,7 +424,11 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "email_contato": info.get("email_responsavel") or "",
         "endereco": info.get("endereco") or "",
         "bairro": info.get("bairro") or "",
-        "tipo_contratacao": _limpar_texto(item.get("tipoVaga") or ""),
+        "tipo_contratacao": (
+            _limpar_texto(item.get("tipoContratacao") or "")
+            or _limpar_texto(item.get("tipoVaga") or "")
+        ),
+        "escolaridade": _limpar_texto(item.get("escolaridade") or ""),
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),
         "edicao_postagem": _normalizar_edicao_postagem(item.get("edicaoPostagem")),

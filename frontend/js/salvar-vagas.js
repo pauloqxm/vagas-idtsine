@@ -124,6 +124,8 @@ const SalvarVagas = {
           <div class="print-card__info">
             <span><strong>Cidade:</strong> ${this.escapeHtml(vaga.municipio || "Não informado")}</span>
             <span><strong>Unidade:</strong> ${this.escapeHtml(vaga.unidade || "Não informado")}</span>
+            <span><strong>Escolaridade:</strong> ${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</span>
+            <span><strong>Contratação:</strong> ${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</span>
           </div>
           <div class="print-card__tags">
             ${
@@ -155,6 +157,8 @@ const SalvarVagas = {
             <td>${this.qtde(vaga)}</td>
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
+            <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
+            <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
             <td class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</td>
           </tr>
@@ -171,6 +175,8 @@ const SalvarVagas = {
               <th>Qtde</th>
               <th>Cidade</th>
               <th>Unidade</th>
+              <th>Escolaridade</th>
+              <th>Contratação</th>
               <th>Publicada</th>
               <th>PCD</th>
             </tr>
@@ -388,13 +394,21 @@ const SalvarVagas = {
       }
 
       .print-vagas-table th:nth-child(5),
-      .print-vagas-table td:nth-child(5) {
+      .print-vagas-table td:nth-child(5),
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      .print-vagas-table th:nth-child(7),
+      .print-vagas-table td:nth-child(7) {
         white-space: nowrap;
         text-align: center;
       }
 
-      .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6) {
+      .print-vagas-table th:nth-child(8),
+      .print-vagas-table td:nth-child(8) {
         width: 1%;
         white-space: nowrap;
         text-align: center;

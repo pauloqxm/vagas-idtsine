@@ -9,6 +9,8 @@ const state = {
     cargo: "",
     unidade: "",
     municipio: "",
+    escolaridade: "",
+    tipoContratacao: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,
@@ -23,6 +25,8 @@ function cacheEls() {
   els.cargo = document.getElementById("busca-cargo");
   els.unidade = document.getElementById("filtro-unidade");
   els.municipio = document.getElementById("filtro-municipio");
+  els.escolaridade = document.getElementById("filtro-escolaridade");
+  els.contratacao = document.getElementById("filtro-contratacao");
   els.data = document.getElementById("filtro-data");
   els.inclusiva = document.getElementById("filtro-inclusiva");
   els.exclusiva = document.getElementById("filtro-exclusiva");
@@ -121,6 +125,15 @@ function passaFiltroPcd(vaga) {
   return tipos.includes(categoriaPcd(vaga));
 }
 
+function textoCampo(vaga, campo) {
+  return String((vaga && vaga[campo]) || "").trim();
+}
+
+function passaFiltroLista(vaga, filtro, campo) {
+  if (!filtro) return true;
+  return normalizar(textoCampo(vaga, campo)) === normalizar(filtro);
+}
+
 function lerFiltrosPcd() {
   state.filtros.inclusiva = Boolean(els.inclusiva?.checked);
   state.filtros.exclusiva = Boolean(els.exclusiva?.checked);
@@ -202,6 +215,12 @@ function preencherSelect(select, valores, textoInicial) {
 function popularFiltrosSuspensos() {
   preencherSelect(els.unidade, unicoOrdenado("unidade"), "Todas");
   preencherSelect(els.municipio, unicoOrdenado("municipio"), "Todos");
+  if (els.escolaridade) {
+    preencherSelect(els.escolaridade, unicoOrdenado("escolaridade"), "Todas");
+  }
+  if (els.contratacao) {
+    preencherSelect(els.contratacao, unicoOrdenado("tipo_contratacao"), "Todos");
+  }
 
   const datalist = document.getElementById("lista-ocupacoes");
   if (datalist) {
@@ -239,12 +258,14 @@ function aplicarFiltrosDaURL() {
 }
 
 function aplicarFiltros() {
-  const { cargo, unidade, municipio, dataPeriodo } = state.filtros;
+  const { cargo, unidade, municipio, escolaridade, tipoContratacao, dataPeriodo } = state.filtros;
 
   state.filtradas = state.vagas.filter((vaga) => {
     if (cargo && !contem(vaga.ocupacao, cargo)) return false;
     if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
     if (municipio && normalizar(vaga.municipio) !== normalizar(municipio)) return false;
+    if (!passaFiltroLista(vaga, escolaridade, "escolaridade")) return false;
+    if (!passaFiltroLista(vaga, tipoContratacao, "tipo_contratacao")) return false;
     if (!dataDentroPeriodo(dataFiltro(vaga), dataPeriodo)) return false;
     if (!passaFiltroPcd(vaga)) return false;
     return true;
@@ -289,6 +310,8 @@ function atualizarStatus() {
     state.filtros.cargo ||
     state.filtros.unidade ||
     state.filtros.municipio ||
+    state.filtros.escolaridade ||
+    state.filtros.tipoContratacao ||
     state.filtros.inclusiva ||
     state.filtros.exclusiva;
 
@@ -323,6 +346,8 @@ function vagasDoMunicipioParaCompartilhar(municipio) {
   return state.vagas
     .filter((vaga) => {
       if (normalizar(vaga.municipio) !== alvo) return false;
+      if (!passaFiltroLista(vaga, state.filtros.escolaridade, "escolaridade")) return false;
+      if (!passaFiltroLista(vaga, state.filtros.tipoContratacao, "tipo_contratacao")) return false;
       if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
       if (!passaFiltroPcd(vaga)) return false;
       return true;
@@ -448,6 +473,8 @@ function aplicarBuscaPopular(valor) {
   state.filtros.cargo = els.cargo.value.trim();
   state.filtros.unidade = els.unidade.value;
   state.filtros.municipio = els.municipio.value;
+  state.filtros.escolaridade = els.escolaridade?.value || "";
+  state.filtros.tipoContratacao = els.contratacao?.value || "";
   state.filtros.dataPeriodo = "mais-recente";
   lerFiltrosPcd();
   aplicarFiltros();
@@ -485,6 +512,8 @@ function renderLista() {
               <th scope="col">Qtde</th>
               <th scope="col">Cidade</th>
               <th scope="col">Unidade</th>
+              <th scope="col">Escolaridade</th>
+              <th scope="col">Contratação</th>
               <th scope="col">Publicada</th>
               <th scope="col">PCD</th>
               <th scope="col">Ações</th>
@@ -543,6 +572,8 @@ function renderCard(vaga) {
           <div class="vaga-info">
             <span><strong>Cidade:</strong> ${escapeHtml(vaga.municipio || "Não informado")}</span>
             <span><strong>Unidade:</strong> ${escapeHtml(vaga.unidade || "Não informado")}</span>
+            <span><strong>Escolaridade:</strong> ${escapeHtml(textoCampo(vaga, "escolaridade") || "Não informado")}</span>
+            <span><strong>Contratação:</strong> ${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</span>
           </div>
         </div>
         <span class="vaga-qty">${qtde(vaga)} vaga(s)</span>
@@ -575,6 +606,8 @@ function renderLinhaTabela(vaga) {
       <td data-label="Qtde">${qtde(vaga)}</td>
       <td data-label="Cidade">${escapeHtml(vaga.municipio || "Não informado")}</td>
       <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
+      <td data-label="Escolaridade">${escapeHtml(textoCampo(vaga, "escolaridade") || "Não informado")}</td>
+      <td data-label="Contratação">${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</td>
       <td data-label="Publicada">${escapeHtml(dataExibicao(vaga.data_disponibilidade) || "—")}</td>
       <td data-label="PCD"><span class="vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotulo)}</span></td>
       <td data-label="Ações">
@@ -639,6 +672,8 @@ function limparBusca() {
     cargo: "",
     unidade: "",
     municipio: "",
+    escolaridade: "",
+    tipoContratacao: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,
@@ -646,6 +681,8 @@ function limparBusca() {
   els.cargo.value = "";
   els.unidade.value = "";
   els.municipio.value = "";
+  if (els.escolaridade) els.escolaridade.value = "";
+  if (els.contratacao) els.contratacao.value = "";
   atualizarCampoDataTravada();
   if (els.inclusiva) els.inclusiva.checked = false;
   if (els.exclusiva) els.exclusiva.checked = false;
@@ -687,6 +724,8 @@ function bindEvents() {
     state.filtros.cargo = els.cargo.value.trim();
     state.filtros.unidade = els.unidade.value;
     state.filtros.municipio = els.municipio.value;
+    state.filtros.escolaridade = els.escolaridade?.value || "";
+    state.filtros.tipoContratacao = els.contratacao?.value || "";
     state.filtros.dataPeriodo = "mais-recente";
     lerFiltrosPcd();
     aplicarFiltros();
@@ -717,6 +756,10 @@ function bindEvents() {
       aplicarFiltrosDaTela();
       ativarAbaPopular(tipo);
     });
+  });
+
+  [els.escolaridade, els.contratacao].forEach((select) => {
+    select?.addEventListener("change", aplicarFiltrosDaTela);
   });
 
   [els.inclusiva, els.exclusiva].forEach((el) => {

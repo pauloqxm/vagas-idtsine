@@ -315,6 +315,15 @@ h1 {
   gap: 0.75rem;
 }
 
+.search-row--extra {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 0.75rem;
+}
+
+.search-row--extra .field-icon {
+  white-space: nowrap;
+}
+
 .search-field {
   display: flex;
   align-items: center;
