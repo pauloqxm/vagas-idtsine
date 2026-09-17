@@ -156,7 +156,6 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.ocupacao || "Vaga sem nome")}</td>
             <td>${this.qtde(vaga)}</td>
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
-            <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
@@ -174,7 +173,6 @@ const SalvarVagas = {
               <th>Ocupação</th>
               <th>Qtde</th>
               <th>Cidade</th>
-              <th>Unidade</th>
               <th>Escolaridade</th>
               <th>Contratação</th>
               <th>Publicada</th>
@@ -387,28 +385,26 @@ const SalvarVagas = {
       }
 
       .print-vagas-table th:nth-child(3),
-      .print-vagas-table td:nth-child(3),
-      .print-vagas-table th:nth-child(4),
-      .print-vagas-table td:nth-child(4) {
+      .print-vagas-table td:nth-child(3) {
         white-space: nowrap;
       }
 
+      .print-vagas-table th:nth-child(4),
+      .print-vagas-table td:nth-child(4),
       .print-vagas-table th:nth-child(5),
-      .print-vagas-table td:nth-child(5),
-      .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6) {
+      .print-vagas-table td:nth-child(5) {
         word-break: break-word;
         overflow-wrap: anywhere;
       }
 
-      .print-vagas-table th:nth-child(7),
-      .print-vagas-table td:nth-child(7) {
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
         white-space: nowrap;
         text-align: center;
       }
 
-      .print-vagas-table th:nth-child(8),
-      .print-vagas-table td:nth-child(8) {
+      .print-vagas-table th:nth-child(7),
+      .print-vagas-table td:nth-child(7) {
         width: 1%;
         white-space: nowrap;
         text-align: center;
