@@ -280,6 +280,15 @@ function totalVagasQuantidades() {
   return state.filtradas.reduce((acc, vaga) => acc + qtde(vaga), 0);
 }
 
+function totalOcupacoesUnicas() {
+  const codigos = new Set();
+  state.filtradas.forEach((vaga) => {
+    const codigo = String(vaga.codigo_cbo || "").trim();
+    if (codigo) codigos.add(codigo);
+  });
+  return codigos.size;
+}
+
 function calcularKPIs() {
   let regulares = 0;
   let inclusiva = 0;
@@ -307,6 +316,7 @@ function atualizarKPIs() {
 function atualizarStatus() {
   const totalOfertas = state.filtradas.length;
   const totalQtd = totalVagasQuantidades();
+  const totalOcupacoes = totalOcupacoesUnicas();
   const temBusca =
     state.filtros.cargo ||
     state.filtros.unidade ||
@@ -319,7 +329,7 @@ function atualizarStatus() {
   els.status.textContent =
     totalOfertas === 0
       ? "Nenhuma vaga encontrada. Tente outra palavra, unidade ou município."
-      : `${totalQtd} vaga(s) encontrada(s) em ${totalOfertas} oferta(s).`;
+      : `${totalQtd} vaga(s) encontrada(s) em ${totalOcupacoes} ocupações.`;
 
   els.limpar.classList.toggle("hidden", !temBusca);
 }
