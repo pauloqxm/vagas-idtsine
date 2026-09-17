@@ -34,6 +34,7 @@ function cacheEls() {
   els.lista = document.getElementById("lista-vagas");
   els.paginacao = document.getElementById("paginacao");
   els.limpar = document.getElementById("btn-limpar");
+  els.limparFiltros = document.getElementById("btn-limpar-filtros");
   els.modal = document.getElementById("modal-vaga");
   els.modalBody = document.getElementById("modal-body");
   els.popularList = document.getElementById("popular-list");
@@ -484,6 +485,7 @@ function aplicarBuscaPopular(valor) {
 
 function renderLista() {
   atualizarBotoesVisualizacao();
+  atualizarLayoutResultados();
 
   if (state.filtradas.length === 0) {
     els.lista.className = "cards";
@@ -545,6 +547,13 @@ function atualizarBotoesVisualizacao() {
     btn.classList.toggle("is-active", ativo);
     btn.setAttribute("aria-pressed", ativo ? "true" : "false");
   });
+}
+
+function atualizarLayoutResultados() {
+  const layout = document.getElementById("resultados");
+  if (!layout) return;
+  const tabelaAtiva = state.viewMode === "table" && state.filtradas.length > 0;
+  layout.classList.toggle("results-layout--table", tabelaAtiva);
 }
 
 function definirVisualizacao(modo) {
@@ -784,7 +793,9 @@ function bindEvents() {
   els.compartilhar?.addEventListener("click", compartilharVagasMunicipio);
 
   ligarDicasKpi();
-  els.limpar.addEventListener("click", limparBusca);
+  [els.limpar, els.limparFiltros].forEach((btn) => {
+    btn?.addEventListener("click", limparBusca);
+  });
   document.querySelector(".modal__close").addEventListener("click", fecharModal);
   document.querySelector(".modal__backdrop").addEventListener("click", fecharModal);
   document.addEventListener("keydown", (event) => {

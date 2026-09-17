@@ -831,9 +831,21 @@ h1 {
 
 .results-layout {
   display: grid;
-  grid-template-columns: 290px 1fr;
+  grid-template-columns: 290px minmax(0, 1fr);
   gap: 1.2rem;
   align-items: start;
+}
+
+.results-layout > div {
+  min-width: 0;
+}
+
+.results-layout--table {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.results-layout--table .help-card {
+  display: none;
 }
 
 .help-card,
@@ -1048,6 +1060,7 @@ h1 {
   border-radius: var(--radius);
   box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
   overflow: hidden;
+  max-width: 100%;
 }
 
 .vagas-table-scroll {
@@ -1056,7 +1069,7 @@ h1 {
 
 .vagas-table {
   width: 100%;
-  min-width: 900px;
+  min-width: 1080px;
   border-collapse: collapse;
   font-size: 0.94rem;
 }
@@ -1074,6 +1087,17 @@ h1 {
   color: var(--idt-green-hover);
   font-weight: 900;
   white-space: nowrap;
+}
+
+.vagas-table td {
+  white-space: nowrap;
+}
+
+.vagas-table td[data-label="Ocupação"],
+.vagas-table td[data-label="Escolaridade"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 8.5rem;
 }
 
 .vagas-table tbody tr:nth-child(even) {
@@ -2243,6 +2267,7 @@ body.map-popup-open {
     align-items: start;
     padding: 0.38rem 0;
     border-bottom: 0;
+    white-space: normal;
   }
 
   .vagas-table td::before,
