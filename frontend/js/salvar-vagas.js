@@ -9,6 +9,15 @@ const SalvarVagas = {
     return Number(vaga.qtde_vagas) || 1;
   },
 
+  totalOcupacoesUnicas(vagas) {
+    const ocupacoes = new Set();
+    (vagas || []).forEach((vaga) => {
+      const nome = this.normalizar(String(vaga.ocupacao || "").trim());
+      if (nome) ocupacoes.add(nome);
+    });
+    return ocupacoes.size;
+  },
+
   dataHojeBR() {
     return new Date().toLocaleDateString("pt-BR");
   },
@@ -637,7 +646,7 @@ const SalvarVagas = {
     </header>
 
     <div class="print-summary">
-      <span class="print-summary__item">${vagas.length} oferta(s)</span>
+      <span class="print-summary__item">${this.totalOcupacoesUnicas(vagas)} ocupações</span>
       <span class="print-summary__item print-summary__item--green">${totalVagas} vaga(s)</span>
       ${
         Number(totalInclusiva) > 0
