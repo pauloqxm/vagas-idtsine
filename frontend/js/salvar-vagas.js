@@ -411,6 +411,19 @@ const SalvarVagas = {
         color: #d95415;
       }
 
+      .print-more-info {
+        margin-top: 10px;
+        text-align: center;
+        color: #003d68;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .print-more-info a {
+        color: #003d68;
+        text-decoration: underline;
+      }
+
       .print-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -717,6 +730,10 @@ const SalvarVagas = {
       </div>
     </div>
 
+    <p class="print-more-info">
+      Para mais informações acesse: <a href="https://vagas.idt.org.br/">https://vagas.idt.org.br/</a>
+    </p>
+
     <footer class="print-footer">
       Documento gerado pelo portal de Vagas de Emprego do IDT — página formatada em A4.
     </footer>
@@ -980,6 +997,7 @@ const SalvarVagas = {
     const header = fonte.querySelector(".print-header");
     const summary = fonte.querySelector(".print-summary");
     const legend = fonte.querySelector(".print-legend");
+    const moreInfo = fonte.querySelector(".print-more-info");
     const footer = fonte.querySelector(".print-footer");
     const grid = fonte.querySelector(".print-grid");
     const cards = grid ? [...grid.children] : [];
@@ -1015,6 +1033,7 @@ const SalvarVagas = {
 
       if (fim >= cards.length) {
         if (legend) chunk.appendChild(legend.cloneNode(true));
+        if (moreInfo) chunk.appendChild(moreInfo.cloneNode(true));
         if (footer) chunk.appendChild(footer.cloneNode(true));
       }
       return chunk;
