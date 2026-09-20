@@ -773,63 +773,32 @@ h1 {
 }
 
 .popular-tab:hover,
-.popular-tab:focus-visible {
-  background: #ffffff;
-  color: var(--idt-blue);
-  border-color: #d6e1ed;
-  outline: none;
-}
-
+.popular-tab:focus-visible,
 .popular-tab.active {
   color: #ffffff;
   border-color: transparent;
+  outline: none;
 }
 
-.popular-theme--vagas .popular-tab.active {
+.popular-tab[data-popular-tab="vagas"]:hover,
+.popular-tab[data-popular-tab="vagas"]:focus-visible,
+.popular-tab[data-popular-tab="vagas"].active {
   background: linear-gradient(135deg, var(--idt-blue), #00578c);
   box-shadow: 0 6px 14px rgba(0, 61, 104, 0.25);
 }
 
-.popular-theme--cidades .popular-tab.active {
+.popular-tab[data-popular-tab="cidades"]:hover,
+.popular-tab[data-popular-tab="cidades"]:focus-visible,
+.popular-tab[data-popular-tab="cidades"].active {
   background: linear-gradient(135deg, var(--idt-green), var(--idt-green-hover));
   box-shadow: 0 6px 14px rgba(0, 168, 89, 0.25);
 }
 
-.popular-theme--unidades .popular-tab.active {
+.popular-tab[data-popular-tab="unidades"]:hover,
+.popular-tab[data-popular-tab="unidades"]:focus-visible,
+.popular-tab[data-popular-tab="unidades"].active {
   background: linear-gradient(135deg, var(--idt-orange), var(--idt-orange-hover));
   box-shadow: 0 6px 14px rgba(242, 101, 34, 0.25);
-}
-
-.popular-tab.active:hover,
-.popular-tab.active:focus-visible,
-.popular-theme--vagas .popular-tab.active:hover,
-.popular-theme--vagas .popular-tab.active:focus-visible,
-.popular-theme--cidades .popular-tab.active:hover,
-.popular-theme--cidades .popular-tab.active:focus-visible,
-.popular-theme--unidades .popular-tab.active:hover,
-.popular-theme--unidades .popular-tab.active:focus-visible {
-  color: #ffffff;
-}
-
-.popular-theme--cidades .popular-tab:hover:not(.active),
-.popular-theme--cidades .popular-tab:focus-visible:not(.active) {
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--idt-green), var(--idt-green-hover));
-  border-color: transparent;
-}
-
-.popular-theme--unidades .popular-tab:hover:not(.active),
-.popular-theme--unidades .popular-tab:focus-visible:not(.active) {
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--idt-orange), var(--idt-orange-hover));
-  border-color: transparent;
-}
-
-.popular-theme--vagas .popular-tab:hover:not(.active),
-.popular-theme--vagas .popular-tab:focus-visible:not(.active) {
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--idt-blue), #00578c);
-  border-color: transparent;
 }
 
 .popular-list {
