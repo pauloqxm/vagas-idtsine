@@ -161,7 +161,6 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
-            <td>${this.escapeHtml(this.dataExibicao(vaga.data_disponibilidade) || "—")}</td>
             <td class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</td>
           </tr>
         `;
@@ -178,8 +177,7 @@ const SalvarVagas = {
               <th>Cidade</th>
               <th>Escolaridade</th>
               <th>Contratação</th>
-              <th>Publicada</th>
-              <th>PCD</th>
+              <th>Direcionamento</th>
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
@@ -405,12 +403,6 @@ const SalvarVagas = {
 
       .print-vagas-table th:nth-child(6),
       .print-vagas-table td:nth-child(6) {
-        white-space: nowrap;
-        text-align: center;
-      }
-
-      .print-vagas-table th:nth-child(7),
-      .print-vagas-table td:nth-child(7) {
         width: 1%;
         white-space: nowrap;
         text-align: center;
