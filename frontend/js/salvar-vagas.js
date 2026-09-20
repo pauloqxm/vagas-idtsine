@@ -340,6 +340,7 @@ const SalvarVagas = {
       .print-summary {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 8px;
         margin-bottom: 12px;
       }
@@ -696,6 +697,7 @@ const SalvarVagas = {
     </header>
 
     <div class="print-summary">
+      <span class="print-summary__item">${this.totalOcupacoesUnicas(vagas)} ocupações</span>
       <span class="print-summary__item print-summary__item--green">${Number(totalVagas) || 0} Total de vagas</span>
       <span class="print-summary__item print-summary__item--regular">${Number(totalRegulares) || 0} Vagas Regulares</span>
       <span class="print-summary__item print-summary__item--blue">${Number(totalInclusiva) || 0} Inclusiva</span>
