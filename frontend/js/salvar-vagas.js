@@ -94,17 +94,11 @@ const SalvarVagas = {
       const chave = this.normalizar(unidade);
       if (mapa.has(chave)) return;
 
-      const telefone =
-        String(dados.telefone_unidade || "").trim() ||
-        String(dados.celular_responsavel || "").trim() ||
-        String(dados.telefone || "").trim();
-      const email = String(dados.email_contato || "").trim();
-      const contato = telefone || email || "Não informado";
-
       mapa.set(chave, {
         unidade,
         responsavel: String(dados.responsavel_unidade || "").trim() || "Não informado",
-        contato,
+        telefoneUnidade: String(dados.telefone_unidade || "").trim() || "Não informado",
+        endereco: String(dados.endereco || "").trim() || "Não informado",
       });
     });
     return [...mapa.values()];
@@ -189,9 +183,9 @@ const SalvarVagas = {
     if (!unidades.length) {
       return `
         <div class="print-unit">
-          <div><strong>Unidade:</strong> Não informado</div>
           <div><strong>Responsável:</strong> Não informado</div>
-          <div><strong>Contato:</strong> Não informado</div>
+          <div><strong>Telefone da unidade:</strong> Não informado</div>
+          <div><strong>Endereço:</strong> Não informado</div>
         </div>
       `;
     }
@@ -200,9 +194,9 @@ const SalvarVagas = {
       .map(
         (item) => `
       <div class="print-unit">
-        <div><strong>Unidade:</strong> ${this.escapeHtml(item.unidade)}</div>
         <div><strong>Responsável:</strong> ${this.escapeHtml(item.responsavel)}</div>
-        <div><strong>Contato:</strong> ${this.escapeHtml(item.contato)}</div>
+        <div><strong>Telefone da unidade:</strong> ${this.escapeHtml(item.telefoneUnidade)}</div>
+        <div><strong>Endereço:</strong> ${this.escapeHtml(item.endereco)}</div>
       </div>
     `
       )
@@ -300,7 +294,7 @@ const SalvarVagas = {
 
       .print-unit {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr);
         gap: 8px 12px;
         padding: 8px 10px;
         border-radius: 10px;
@@ -313,6 +307,11 @@ const SalvarVagas = {
 
       .print-unit strong {
         color: #003d68;
+      }
+
+      .print-unit > div:last-child {
+        overflow-wrap: break-word;
+        word-break: normal;
       }
 
       .print-summary {
