@@ -2,6 +2,8 @@ const state = {
   vagas: [],
   filtradas: [],
   popularesTipo: "vagas",
+  popularesPagina: 1,
+  popularesPorPagina: 12,
   pagina: 1,
   porPagina: 12,
   viewMode: "cards",
@@ -38,6 +40,7 @@ function cacheEls() {
   els.modal = document.getElementById("modal-vaga");
   els.modalBody = document.getElementById("modal-body");
   els.popularList = document.getElementById("popular-list");
+  els.popularPager = document.getElementById("popular-paginacao");
   els.popularTabs = document.querySelectorAll("[data-popular-tab]");
   els.kpiTotal = document.getElementById("kpi-vagas-total");
   els.kpiRegulares = document.getElementById("kpi-vagas-regulares");
@@ -416,9 +419,9 @@ function obterRanking(tipo) {
     mapa.set(chave, atual);
   });
 
-  return [...mapa.values()]
-    .sort((a, b) => b.ofertas - a.ofertas || b.total - a.total || a.texto.localeCompare(b.texto, "pt-BR"))
-    .slice(0, 12);
+  return [...mapa.values()].sort(
+    (a, b) => b.ofertas - a.ofertas || b.total - a.total || a.texto.localeCompare(b.texto, "pt-BR")
+  );
 }
 
 function valorPopularSelecionado(tipo) {
@@ -429,6 +432,7 @@ function valorPopularSelecionado(tipo) {
 
 function ativarAbaPopular(tipo) {
   state.popularesTipo = tipo;
+  state.popularesPagina = 1;
   els.popularTabs.forEach((item) => {
     const active = item.dataset.popularTab === tipo;
     item.classList.toggle("active", active);
@@ -451,24 +455,60 @@ function renderPopulares() {
 
   if (ranking.length === 0) {
     els.popularList.innerHTML = "<span>Nenhuma busca popular encontrada.</span>";
+    if (els.popularPager) {
+      els.popularPager.classList.add("hidden");
+      els.popularPager.innerHTML = "";
+    }
     return;
   }
 
-  els.popularList.innerHTML = ranking
-    .map(
-      (item) => {
-        const active = selecionado && normalizar(item.texto) === normalizar(selecionado);
-        return `
-        <button type="button" class="popular-item ${active ? "active" : ""}" data-popular-value="${escapeAttr(item.texto)}" title="${escapeAttr(item.texto)}" aria-pressed="${active ? "true" : "false"}">
-          ${escapeHtml(item.texto)}
+  const porPagina = state.popularesPorPagina;
+  const paginas = Math.max(1, Math.ceil(ranking.length / porPagina));
+  if (state.popularesPagina > paginas) state.popularesPagina = paginas;
+  if (state.popularesPagina < 1) state.popularesPagina = 1;
+  const inicio = (state.popularesPagina - 1) * porPagina;
+  const pagina = ranking.slice(inicio, inicio + porPagina);
+
+  els.popularList.innerHTML = pagina
+    .map((item) => {
+      const active = selecionado && normalizar(item.texto) === normalizar(selecionado);
+      const total = Number(item.total) || 0;
+      return `
+        <button type="button" class="popular-item ${active ? "active" : ""}" data-popular-value="${escapeAttr(item.texto)}" title="${escapeAttr(`${total} vaga(s) — ${item.texto}`)}" aria-pressed="${active ? "true" : "false"}">
+          <span class="popular-item__tag">${total}</span>
+          <span class="popular-item__name">${escapeHtml(item.texto)}</span>
         </button>
       `;
-      }
-    )
+    })
     .join("");
 
   els.popularList.querySelectorAll("[data-popular-value]").forEach((btn) => {
     btn.addEventListener("click", () => aplicarBuscaPopular(btn.dataset.popularValue || ""));
+  });
+
+  if (!els.popularPager) return;
+  if (paginas <= 1) {
+    els.popularPager.classList.add("hidden");
+    els.popularPager.innerHTML = "";
+    return;
+  }
+
+  els.popularPager.classList.remove("hidden");
+  els.popularPager.innerHTML = `
+    <button type="button" id="popular-pag-anterior" ${state.popularesPagina <= 1 ? "disabled" : ""} aria-label="Página anterior">Recuar</button>
+    <button type="button" id="popular-pag-proxima" ${state.popularesPagina >= paginas ? "disabled" : ""} aria-label="Próxima página">Avançar</button>
+  `;
+  document.getElementById("popular-pag-anterior")?.addEventListener("click", () => {
+    if (state.popularesPagina > 1) {
+      state.popularesPagina -= 1;
+      renderPopulares();
+    }
+  });
+  document.getElementById("popular-pag-proxima")?.addEventListener("click", () => {
+    if (state.popularesPagina < paginas) {
+      state.popularesPagina += 1;
+      renderPopulares();
+    }
   });
 }
 
