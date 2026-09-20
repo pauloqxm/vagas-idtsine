@@ -420,7 +420,7 @@ function obterRanking(tipo) {
   });
 
   return [...mapa.values()].sort(
-    (a, b) => b.ofertas - a.ofertas || b.total - a.total || a.texto.localeCompare(b.texto, "pt-BR")
+    (a, b) => b.total - a.total || b.ofertas - a.ofertas || a.texto.localeCompare(b.texto, "pt-BR")
   );
 }
 
@@ -430,9 +430,20 @@ function valorPopularSelecionado(tipo) {
   return els.cargo.value.trim();
 }
 
+function atualizarTemaPopular() {
+  const card = document.querySelector(".popular-card");
+  if (!card) return;
+  card.classList.remove("popular-theme--vagas", "popular-theme--cidades", "popular-theme--unidades");
+  const tema = ["vagas", "cidades", "unidades"].includes(state.popularesTipo)
+    ? state.popularesTipo
+    : "vagas";
+  card.classList.add(`popular-theme--${tema}`);
+}
+
 function ativarAbaPopular(tipo) {
   state.popularesTipo = tipo;
   state.popularesPagina = 1;
+  atualizarTemaPopular();
   els.popularTabs.forEach((item) => {
     const active = item.dataset.popularTab === tipo;
     item.classList.toggle("active", active);
@@ -443,6 +454,7 @@ function ativarAbaPopular(tipo) {
 
 function renderPopulares() {
   if (!els.popularList) return;
+  atualizarTemaPopular();
   const selecionado = valorPopularSelecionado(state.popularesTipo);
   const ranking = obterRanking(state.popularesTipo);
 
