@@ -18,6 +18,22 @@ const SalvarVagas = {
     return ocupacoes.size;
   },
 
+  totaisPcd(vagas) {
+    let total = 0;
+    let regulares = 0;
+    let inclusiva = 0;
+    let exclusiva = 0;
+    (vagas || []).forEach((vaga) => {
+      const q = this.qtde(vaga);
+      total += q;
+      const categoria = DetalhesVaga.categoriaPcd(vaga);
+      if (categoria === "exclusiva") exclusiva += q;
+      else if (categoria === "inclusiva") inclusiva += q;
+      else regulares += q;
+    });
+    return { total, regulares, inclusiva, exclusiva };
+  },
+
   dataHojeBR() {
     return new Date().toLocaleDateString("pt-BR");
   },
@@ -342,12 +358,54 @@ const SalvarVagas = {
         color: #008f4b;
       }
 
+      .print-summary__item--regular {
+        background: #e8f7ef;
+        color: #00763f;
+      }
+
       .print-summary__item--blue {
         background: #eaf3f8;
         color: #003d68;
       }
 
       .print-summary__item--orange {
+        background: #fff4ef;
+        color: #d95415;
+      }
+
+      .print-legend {
+        display: grid;
+        gap: 6px;
+        margin-top: 10px;
+        padding: 8px 10px;
+        border: 1px solid #d7e5f0;
+        border-radius: 10px;
+        background: #fff;
+        color: #2f3a4e;
+        font-size: 10px;
+        line-height: 1.4;
+      }
+
+      .print-legend__item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .print-legend__swatch {
+        flex: 0 0 auto;
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .print-legend__swatch--inclusiva {
+        background: #eaf3f8;
+        color: #003d68;
+      }
+
+      .print-legend__swatch--exclusiva {
         background: #fff4ef;
         color: #d95415;
       }
@@ -595,7 +653,7 @@ const SalvarVagas = {
     `;
   },
 
-  montarDocumento({ municipio, vagas, totalVagas, totalInclusiva, totalPcd, unidades, logoSrc, formato }) {
+  montarDocumento({ municipio, vagas, totalVagas, totalRegulares, totalInclusiva, totalPcd, unidades, logoSrc, formato }) {
     const data = this.dataHojeBR();
     const geradoEm = this.dataHoraHojeBR();
     const logo =
@@ -638,21 +696,24 @@ const SalvarVagas = {
     </header>
 
     <div class="print-summary">
-      <span class="print-summary__item">${this.totalOcupacoesUnicas(vagas)} ocupações</span>
-      <span class="print-summary__item print-summary__item--green">${totalVagas} vaga(s)</span>
-      ${
-        Number(totalInclusiva) > 0
-          ? `<span class="print-summary__item print-summary__item--blue">${totalInclusiva} vaga(s) inclusiva(s)</span>`
-          : ""
-      }
-      ${
-        totalPcd > 0
-          ? `<span class="print-summary__item print-summary__item--orange">${totalPcd} vaga(s) PCD</span>`
-          : ""
-      }
+      <span class="print-summary__item print-summary__item--green">${Number(totalVagas) || 0} Total de vagas</span>
+      <span class="print-summary__item print-summary__item--regular">${Number(totalRegulares) || 0} Vagas Regulares</span>
+      <span class="print-summary__item print-summary__item--blue">${Number(totalInclusiva) || 0} Inclusiva</span>
+      <span class="print-summary__item print-summary__item--orange">${Number(totalPcd) || 0} Exclusiva PCD</span>
     </div>
 
     ${conteudo}
+
+    <div class="print-legend">
+      <div class="print-legend__item">
+        <span class="print-legend__swatch print-legend__swatch--inclusiva">Inclusiva</span>
+        <span>Vaga aberta para ampla concorrência, mas acessível para candidatos(as) PCD.</span>
+      </div>
+      <div class="print-legend__item">
+        <span class="print-legend__swatch print-legend__swatch--exclusiva">Exclusiva PCD</span>
+        <span>Oportunidade reservada exclusivamente para PCD.</span>
+      </div>
+    </div>
 
     <footer class="print-footer">
       Documento gerado pelo portal de Vagas de Emprego do IDT — página formatada em A4.
@@ -916,6 +977,7 @@ const SalvarVagas = {
 
     const header = fonte.querySelector(".print-header");
     const summary = fonte.querySelector(".print-summary");
+    const legend = fonte.querySelector(".print-legend");
     const footer = fonte.querySelector(".print-footer");
     const grid = fonte.querySelector(".print-grid");
     const cards = grid ? [...grid.children] : [];
@@ -943,12 +1005,15 @@ const SalvarVagas = {
         cards.slice(inicio, fim).forEach((card) => g.appendChild(card.cloneNode(true)));
         chunk.appendChild(g);
       } else if (primeira) {
+        const tabela = fonte.querySelector(".print-vagas-table-wrap");
         const empty = fonte.querySelector(".print-empty");
-        if (empty) chunk.appendChild(empty.cloneNode(true));
+        if (tabela) chunk.appendChild(tabela.cloneNode(true));
+        else if (empty) chunk.appendChild(empty.cloneNode(true));
       }
 
-      if (fim >= cards.length && footer) {
-        chunk.appendChild(footer.cloneNode(true));
+      if (fim >= cards.length) {
+        if (legend) chunk.appendChild(legend.cloneNode(true));
+        if (footer) chunk.appendChild(footer.cloneNode(true));
       }
       return chunk;
     };
@@ -1062,16 +1127,8 @@ const SalvarVagas = {
   async prepararPacote({ municipio, vagas, formato }) {
     const municipioSel = String(municipio || "").trim();
     const lista = Array.isArray(vagas) ? vagas : [];
-    let totalVagas = 0;
-    let totalInclusiva = 0;
-    let totalPcd = 0;
-    lista.forEach((vaga) => {
-      const q = this.qtde(vaga);
-      totalVagas += q;
-      const categoria = DetalhesVaga.categoriaPcd(vaga);
-      if (categoria === "exclusiva") totalPcd += q;
-      else if (categoria === "inclusiva") totalInclusiva += q;
-    });
+    const { total: totalVagas, regulares: totalRegulares, inclusiva: totalInclusiva, exclusiva: totalPcd } =
+      this.totaisPcd(lista);
 
     const unidades = this.obterUnidades(lista);
     const logoSrc = await this.obterLogoSrc();
@@ -1079,6 +1136,7 @@ const SalvarVagas = {
       municipio: municipioSel,
       vagas: lista,
       totalVagas,
+      totalRegulares,
       totalInclusiva,
       totalPcd,
       unidades,
@@ -1304,17 +1362,15 @@ const SalvarVagas = {
       console.error(error);
       // Fallback: ainda permite imprimir / salvar PDF pelo navegador.
       const unidades = this.obterUnidades(Array.isArray(vagas) ? vagas : []);
-      let totalVagas = 0;
-      (vagas || []).forEach((vaga) => {
-        totalVagas += this.qtde(vaga);
-      });
+      const totais = this.totaisPcd(vagas);
       const logoSrc = await this.obterLogoSrc();
       const html = this.montarDocumento({
         municipio: municipioSel,
         vagas: Array.isArray(vagas) ? vagas : [],
-        totalVagas,
-        totalInclusiva: 0,
-        totalPcd: 0,
+        totalVagas: totais.total,
+        totalRegulares: totais.regulares,
+        totalInclusiva: totais.inclusiva,
+        totalPcd: totais.exclusiva,
         unidades,
         logoSrc,
         formato,
