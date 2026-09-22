@@ -216,14 +216,35 @@ const DetalhesVaga = {
       return;
     }
 
+    if (gestao === "prefeitura") {
+      const telUnidade = String(posto.telefone_unidade || vaga?.telefone_unidade || "").trim();
+      const endereco = String(posto.endereco || vaga?.endereco || "").trim();
+      this.abrirDialogo(
+        "Agendamento",
+        "Esta unidade não possui agendamento online. Entre em contato com a unidade.",
+        [
+          { rotulo: "Telefone da unidade", valor: telUnidade },
+          { rotulo: "Endereço", valor: endereco },
+        ]
+      );
+      return;
+    }
+
     this.abrirDialogo(
       "Agendamento",
       `Esta unidade não possui agendamento entre em contato pelo numero ${numero}`
     );
   },
 
-  abrirDialogo(titulo, mensagem) {
+  abrirDialogo(titulo, mensagem, extras = []) {
     document.getElementById("agendar-dialog")?.remove();
+    const extrasHtml = (Array.isArray(extras) ? extras : [])
+      .filter((item) => String(item?.valor || "").trim())
+      .map(
+        (item) =>
+          `<p><strong>${this.escapeHtml(item.rotulo)}:</strong> ${this.escapeHtml(String(item.valor).trim())}</p>`
+      )
+      .join("");
     const dialog = document.createElement("div");
     dialog.id = "agendar-dialog";
     dialog.className = "agendar-dialog";
@@ -232,6 +253,7 @@ const DetalhesVaga = {
       <div class="agendar-dialog__panel" role="dialog" aria-modal="true" aria-labelledby="agendar-dialog-titulo">
         <h3 id="agendar-dialog-titulo">${this.escapeHtml(titulo)}</h3>
         <p>${this.escapeHtml(mensagem)}</p>
+        ${extrasHtml}
         <button type="button" class="btn btn-primary" data-agendar-close>Fechar</button>
       </div>
     `;

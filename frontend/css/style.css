@@ -343,6 +343,12 @@ h1 {
   text-transform: uppercase;
 }
 
+.field-icon--long {
+  white-space: normal;
+  line-height: 1.15;
+  max-width: 6.4rem;
+}
+
 .search-field:focus-within {
   border-color: var(--idt-orange);
   box-shadow: 0 0 0 4px rgba(242, 101, 34, 0.22);
