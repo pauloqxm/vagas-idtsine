@@ -276,7 +276,9 @@ function aplicarFiltros() {
   });
 
   state.pagina = 1;
+  state.popularesPagina = 1;
   render();
+  renderPopulares();
 }
 
 function totalVagasQuantidades() {
@@ -401,7 +403,7 @@ function textoRankingPorTipo(vaga, tipo) {
 function obterRanking(tipo) {
   const mapa = new Map();
 
-  state.vagas.forEach((vaga) => {
+  state.filtradas.forEach((vaga) => {
     const texto = textoRankingPorTipo(vaga, tipo);
     if (!texto) return;
 
@@ -466,7 +468,7 @@ function renderPopulares() {
   }
 
   if (ranking.length === 0) {
-    els.popularList.innerHTML = "<span>Nenhuma busca popular encontrada.</span>";
+    els.popularList.innerHTML = "<span>Nenhuma vaga encontrada neste recorte.</span>";
     if (els.popularPager) {
       els.popularPager.classList.add("hidden");
       els.popularPager.innerHTML = "";
@@ -541,7 +543,6 @@ function aplicarBuscaPopular(valor) {
   state.filtros.dataPeriodo = "mais-recente";
   lerFiltrosPcd();
   aplicarFiltros();
-  renderPopulares();
   document.getElementById("resultados").scrollIntoView({ behavior: "smooth" });
 }
 
@@ -750,7 +751,6 @@ function limparBusca() {
   if (els.inclusiva) els.inclusiva.checked = false;
   if (els.exclusiva) els.exclusiva.checked = false;
   aplicarFiltros();
-  renderPopulares();
   els.cargo.focus();
 }
 
@@ -826,10 +826,7 @@ function bindEvents() {
   });
 
   [els.inclusiva, els.exclusiva].forEach((el) => {
-    el?.addEventListener("change", () => {
-      aplicarFiltrosDaTela();
-      renderPopulares();
-    });
+    el?.addEventListener("change", aplicarFiltrosDaTela);
   });
 
   els.popularTabs.forEach((tab) => {
@@ -879,7 +876,6 @@ async function init() {
     await carregarVagas();
     popularFiltrosSuspensos();
     aplicarFiltrosDaURL();
-    renderPopulares();
     aplicarFiltros();
     if (state.filtros.cargo) {
       document.getElementById("resultados")?.scrollIntoView();
