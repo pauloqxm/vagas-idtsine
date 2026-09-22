@@ -145,12 +145,16 @@
       </div>
     </section>
 
-    <section class="container status-area" aria-live="polite">
+    <section class="container status-area">
       <div class="status-area__text">
         <p id="status-text">Carregando vagas...</p>
         <p id="ultima-atualizacao" class="ultima-atualizacao"></p>
+        <p id="status-refresh" class="status-refresh" aria-live="polite"></p>
       </div>
-      <button id="btn-limpar" type="button" class="btn btn-light hidden">Limpar filtros</button>
+      <div class="status-area__actions">
+        <button id="btn-atualizar-vagas" type="button" class="btn btn-light">Atualizar vagas</button>
+        <button id="btn-limpar" type="button" class="btn btn-light hidden">Limpar filtros</button>
+      </div>
     </section>
 
     <section class="container kpi-section" aria-label="Indicadores das vagas filtradas">

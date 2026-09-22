@@ -8,7 +8,10 @@ router = APIRouter(prefix="/api")
 
 @router.get("/vagas")
 def listar_vagas():
-    return vagas_service.get_payload_vagas()
+    return JSONResponse(
+        content=vagas_service.get_payload_vagas(),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/vagas/municipios")

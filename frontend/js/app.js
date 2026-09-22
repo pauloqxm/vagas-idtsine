@@ -18,6 +18,8 @@ const state = {
     exclusiva: false,
   },
   dataMaisRecente: null,
+  assinaturaVagas: "",
+  atualizandoVagas: false,
 };
 
 const els = {};
@@ -37,6 +39,8 @@ function cacheEls() {
   els.paginacao = document.getElementById("paginacao");
   els.limpar = document.getElementById("btn-limpar");
   els.limparFiltros = document.getElementById("btn-limpar-filtros");
+  els.atualizarVagas = document.getElementById("btn-atualizar-vagas");
+  els.statusRefresh = document.getElementById("status-refresh");
   els.modal = document.getElementById("modal-vaga");
   els.modalBody = document.getElementById("modal-body");
   els.popularList = document.getElementById("popular-list");
@@ -171,15 +175,101 @@ function buscarVagaPorId(id) {
   );
 }
 
+function assinaturaBase(data) {
+  const vagas = Array.isArray(data?.vagas) ? data.vagas : [];
+  const itens = vagas
+    .map((vaga) =>
+      [
+        vaga.id,
+        vaga.identificacao_vagas,
+        qtde(vaga),
+        vaga.ocupacao,
+        vaga.municipio,
+        vaga.unidade,
+        vaga.data_disponibilidade || vaga.data,
+        vaga.edicao_postagem,
+      ].join("|")
+    )
+    .sort()
+    .join(";");
+  return [
+    String(data?.ultima_atualizacao || ""),
+    String(data?.edicao_postagem || ""),
+    vagas.length,
+    itens,
+  ].join("::");
+}
+
+function mostrarFeedbackRefresh(texto, atualizando = false) {
+  if (!els.statusRefresh) return;
+  els.statusRefresh.textContent = texto;
+  els.statusRefresh.classList.toggle("is-updating", Boolean(atualizando && texto));
+}
+
+function selecionarSeExistir(select, valor) {
+  if (!select) return;
+  const alvo = normalizar(valor);
+  const match = [...select.options].find((opt) => opt.value && normalizar(opt.value) === alvo);
+  select.value = match ? match.value : "";
+}
+
+function aplicarValoresFiltroNosCampos() {
+  if (els.cargo) els.cargo.value = state.filtros.cargo || "";
+  selecionarSeExistir(els.unidade, state.filtros.unidade);
+  selecionarSeExistir(els.municipio, state.filtros.municipio);
+  selecionarSeExistir(els.escolaridade, state.filtros.escolaridade);
+  selecionarSeExistir(els.contratacao, state.filtros.tipoContratacao);
+  if (els.inclusiva) els.inclusiva.checked = Boolean(state.filtros.inclusiva);
+  if (els.exclusiva) els.exclusiva.checked = Boolean(state.filtros.exclusiva);
+  state.filtros.unidade = els.unidade?.value || "";
+  state.filtros.municipio = els.municipio?.value || "";
+  state.filtros.escolaridade = els.escolaridade?.value || "";
+  state.filtros.tipoContratacao = els.contratacao?.value || "";
+}
+
 async function carregarVagas() {
-  const res = await fetch("/api/vagas");
+  const res = await fetch("/api/vagas", { cache: "no-store" });
   if (!res.ok) throw new Error("Não foi possível carregar as vagas.");
   const data = await res.json();
+  const assinatura = assinaturaBase(data);
+  const mudou = assinatura !== state.assinaturaVagas;
+  state.assinaturaVagas = assinatura;
   state.vagas = Array.isArray(data.vagas) ? data.vagas : [];
   state.dataMaisRecente = calcularDataMaisRecente();
   atualizarCampoDataTravada();
   atualizarUltimaAtualizacao();
-  state.filtradas = [...state.vagas];
+  return mudou;
+}
+
+async function atualizarVagas() {
+  if (state.atualizandoVagas) return;
+  state.filtros.cargo = els.cargo?.value.trim() || "";
+  state.filtros.unidade = els.unidade?.value || "";
+  state.filtros.municipio = els.municipio?.value || "";
+  state.filtros.escolaridade = els.escolaridade?.value || "";
+  state.filtros.tipoContratacao = els.contratacao?.value || "";
+  state.filtros.dataPeriodo = "mais-recente";
+  lerFiltrosPcd();
+  state.atualizandoVagas = true;
+  if (els.atualizarVagas) els.atualizarVagas.disabled = true;
+  mostrarFeedbackRefresh("Atualizando...", true);
+  try {
+    const mudou = await carregarVagas();
+    popularFiltrosSuspensos();
+    aplicarValoresFiltroNosCampos();
+    if (mudou) {
+      aplicarFiltros();
+    } else {
+      aplicarFiltros({ resetarPagina: false, limparFeedback: false });
+      mostrarFeedbackRefresh("Já está na versão mais recente.");
+    }
+  } catch (error) {
+    console.error(error);
+    mostrarFeedbackRefresh("Não foi possível atualizar as vagas. Tente novamente.");
+  } finally {
+    state.atualizandoVagas = false;
+    if (els.atualizarVagas) els.atualizarVagas.disabled = false;
+  }
 }
 
 function atualizarCampoDataTravada() {
@@ -261,8 +351,9 @@ function aplicarFiltrosDaURL() {
   }
 }
 
-function aplicarFiltros() {
+function aplicarFiltros(opcoes = {}) {
   const { cargo, unidade, municipio, escolaridade, tipoContratacao, dataPeriodo } = state.filtros;
+  const resetarPagina = opcoes.resetarPagina !== false;
 
   state.filtradas = state.vagas.filter((vaga) => {
     if (cargo && !contem(vaga.ocupacao, cargo)) return false;
@@ -275,8 +366,13 @@ function aplicarFiltros() {
     return true;
   });
 
-  state.pagina = 1;
-  state.popularesPagina = 1;
+  if (resetarPagina) {
+    state.pagina = 1;
+    state.popularesPagina = 1;
+  }
+  if (opcoes.limparFeedback !== false) {
+    mostrarFeedbackRefresh("");
+  }
   render();
   renderPopulares();
 }
@@ -842,6 +938,7 @@ function bindEvents() {
   });
 
   els.compartilhar?.addEventListener("click", compartilharVagasMunicipio);
+  els.atualizarVagas?.addEventListener("click", atualizarVagas);
 
   ligarDicasKpi();
   [els.limpar, els.limparFiltros].forEach((btn) => {
