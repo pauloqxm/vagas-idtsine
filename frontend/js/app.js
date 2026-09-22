@@ -938,7 +938,15 @@ function bindEvents() {
   });
 
   els.compartilhar?.addEventListener("click", compartilharVagasMunicipio);
-  els.atualizarVagas?.addEventListener("click", atualizarVagas);
+  els.atualizarVagas?.addEventListener("click", () => {
+    els.atualizarVagas.classList.remove("is-clicking");
+    void els.atualizarVagas.offsetWidth;
+    els.atualizarVagas.classList.add("is-clicking");
+    atualizarVagas();
+  });
+  els.atualizarVagas?.addEventListener("animationend", () => {
+    els.atualizarVagas.classList.remove("is-clicking");
+  });
 
   ligarDicasKpi();
   [els.limpar, els.limparFiltros].forEach((btn) => {
