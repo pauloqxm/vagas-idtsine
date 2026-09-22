@@ -730,7 +730,6 @@ function renderCard(vaga) {
         <div>
           <h3 class="vaga-title">${escapeHtml(vaga.ocupacao || "Vaga sem nome")}</h3>
           <div class="vaga-info">
-            <span><strong>Cidade:</strong> ${escapeHtml(vaga.municipio || "Não informado")}</span>
             <span><strong>Unidade:</strong> ${escapeHtml(vaga.unidade || "Não informado")}</span>
             <span><strong>Escolaridade:</strong> ${escapeHtml(textoCampo(vaga, "escolaridade") || "Não informado")}</span>
             <span><strong>Contratação:</strong> ${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</span>

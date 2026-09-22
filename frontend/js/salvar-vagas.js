@@ -141,7 +141,6 @@ const SalvarVagas = {
             <span class="print-card__qty">${this.qtde(vaga)} vaga(s)</span>
           </div>
           <div class="print-card__info">
-            <span><strong>Cidade:</strong> ${this.escapeHtml(vaga.municipio || "Não informado")}</span>
             <span><strong>Unidade:</strong> ${this.escapeHtml(vaga.unidade || "Não informado")}</span>
             <span><strong>Escolaridade:</strong> ${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</span>
             <span><strong>Contratação:</strong> ${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</span>
@@ -174,7 +173,7 @@ const SalvarVagas = {
           <tr>
             <td>${this.escapeHtml(vaga.ocupacao || "Vaga sem nome")}</td>
             <td>${this.qtde(vaga)}</td>
-            <td>${this.escapeHtml(vaga.municipio || "Não informado")}</td>
+            <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
             <td class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</td>
@@ -190,7 +189,7 @@ const SalvarVagas = {
             <tr>
               <th>Ocupação</th>
               <th>Qtde</th>
-              <th>Cidade</th>
+              <th>Unidade</th>
               <th>Escolaridade</th>
               <th>Contratação</th>
               <th>Direcionamento</th>
