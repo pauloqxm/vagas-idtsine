@@ -104,8 +104,15 @@ input {
   text-decoration: underline;
 }
 
-.site-shortcuts__cta {
+.site-shortcuts__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   margin-left: auto;
+}
+
+.site-shortcuts__cta {
   padding: 0.38rem 0.95rem;
   border-radius: 999px;
   background: var(--idt-green);
@@ -119,6 +126,17 @@ input {
   background: var(--idt-green-hover);
   color: #fff !important;
   text-decoration: none;
+}
+
+.site-shortcuts__cta--map {
+  background: var(--idt-blue);
+  box-shadow: 0 4px 12px rgba(0, 61, 104, 0.22);
+}
+
+.site-shortcuts__cta--map:hover,
+.site-shortcuts__cta--map:focus-visible {
+  background: var(--idt-blue);
+  filter: brightness(1.08);
 }
 
 .topbar__inner {
