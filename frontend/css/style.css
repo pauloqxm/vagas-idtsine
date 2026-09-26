@@ -1789,14 +1789,23 @@ h1 {
 }
 
 .map-legend {
+  position: absolute;
+  left: 50%;
+  bottom: 2.4rem;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.6rem;
-  padding: 0.65rem 0.8rem;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.65rem 0.9rem;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.9rem;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .map-legend span {
@@ -2387,6 +2396,14 @@ body.map-popup-open {
   .map-summary {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .map-legend {
+    left: 0.75rem;
+    right: 0.75rem;
+    max-width: none;
+    transform: none;
+    border-radius: 16px;
   }
 
   .map-filters {
