@@ -93,7 +93,7 @@ const DetalhesVaga = {
       <h2 id="modal-titulo">${this.escapeHtml(dados.ocupacao || "Detalhes da vaga")}</h2>
       <div class="detail-list">
         <div><strong>Quantidade:</strong> ${this.qtde(dados)} vaga(s)</div>
-        <div><strong>Cidade:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
+        <div><strong>Município:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
         <div><strong>Escolaridade:</strong> ${this.escapeHtml(String(dados.escolaridade || "").trim() || "Não informado")}</div>
         <div><strong>Contratação:</strong> ${this.escapeHtml(String(dados.tipo_contratacao || "").trim() || "Não informado")}</div>

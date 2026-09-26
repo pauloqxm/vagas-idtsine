@@ -686,7 +686,7 @@ function renderLista() {
             <tr>
               <th scope="col">Ocupação</th>
               <th scope="col">Qtde</th>
-              <th scope="col">Cidade</th>
+              <th scope="col">Município</th>
               <th scope="col">Unidade</th>
               <th scope="col">Escolaridade</th>
               <th scope="col">Contratação</th>
@@ -783,7 +783,7 @@ function renderLinhaTabela(vaga) {
         </button>
       </td>
       <td data-label="Qtde">${qtde(vaga)}</td>
-      <td data-label="Cidade">${escapeHtml(vaga.municipio || "Não informado")}</td>
+      <td data-label="Município">${escapeHtml(vaga.municipio || "Não informado")}</td>
       <td data-label="Unidade">${escapeHtml(vaga.unidade || "Não informado")}</td>
       <td data-label="Escolaridade">${escapeHtml(textoCampo(vaga, "escolaridade") || "Não informado")}</td>
       <td data-label="Contratação">${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</td>

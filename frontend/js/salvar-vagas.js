@@ -108,6 +108,17 @@ const SalvarVagas = {
       .trim();
   },
 
+  descricaoUnidade(vaga) {
+    return String((vaga && (vaga.unidade || vaga.descricaoUnidade)) || "").trim();
+  },
+
+  tituloUnidade(vagas) {
+    const nomes = [
+      ...new Set((vagas || []).map((vaga) => this.descricaoUnidade(vaga)).filter(Boolean)),
+    ];
+    return nomes.join(" · ");
+  },
+
   obterUnidades(vagas) {
     const mapa = new Map();
     (vagas || []).forEach((vaga) => {
@@ -175,7 +186,6 @@ const SalvarVagas = {
           <tr>
             <td>${this.escapeHtml(vaga.ocupacao || "Vaga sem nome")}</td>
             <td>${this.qtde(vaga)}</td>
-            <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.experiencia || "").trim() || "Não informado")}</td>
@@ -193,11 +203,10 @@ const SalvarVagas = {
             <tr>
               <th>Ocupação</th>
               <th>Qtde</th>
-              <th>Unidade</th>
               <th>Escolaridade</th>
               <th>Contratação</th>
               <th>Experiência</th>
-              <th>Município do trabalho</th>
+              <th>Município</th>
               <th>Direcionamento</th>
             </tr>
           </thead>
@@ -474,20 +483,18 @@ const SalvarVagas = {
       .print-vagas-table th:nth-child(4),
       .print-vagas-table td:nth-child(4),
       .print-vagas-table th:nth-child(5),
-      .print-vagas-table td:nth-child(5),
-      .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6) {
+      .print-vagas-table td:nth-child(5) {
         white-space: nowrap;
       }
 
-      .print-vagas-table th:nth-child(7),
-      .print-vagas-table td:nth-child(7) {
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
         white-space: normal;
         overflow-wrap: break-word;
       }
 
-      .print-vagas-table th:nth-child(8),
-      .print-vagas-table td:nth-child(8) {
+      .print-vagas-table th:nth-child(7),
+      .print-vagas-table td:nth-child(7) {
         width: 1%;
         white-space: nowrap;
         text-align: center;
@@ -686,6 +693,7 @@ const SalvarVagas = {
     const logo =
       logoSrc ||
       "https://www.idt.org.br/assets/img/logos/logo_grande.png";
+    const tituloLocal = this.tituloUnidade(vagas) || municipio;
     const emTabela = formato === "table" || formato === "tabela";
     const conteudo =
       vagas.length > 0
@@ -698,7 +706,7 @@ const SalvarVagas = {
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Vagas - ${this.escapeHtml(municipio)} - ${data}</title>
+  <title>Vagas - ${this.escapeHtml(tituloLocal)} - ${data}</title>
   <style>${this.estilos(formato)}</style>
 </head>
 <body>
@@ -709,7 +717,7 @@ const SalvarVagas = {
           <img class="print-logo" src="${this.escapeHtml(logo)}" alt="IDT — Instituto de Desenvolvimento do Trabalho" />
           <h1 class="print-header__title">
             Vagas de Emprego
-            <span>${this.escapeHtml(municipio)}</span>
+            <span>${this.escapeHtml(tituloLocal)}</span>
           </h1>
         </div>
         <div class="print-header__meta">
