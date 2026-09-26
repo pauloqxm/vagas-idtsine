@@ -13,6 +13,7 @@ const state = {
     municipio: "",
     escolaridade: "",
     tipoContratacao: "",
+    experiencia: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,
@@ -31,6 +32,7 @@ function cacheEls() {
   els.municipio = document.getElementById("filtro-municipio");
   els.escolaridade = document.getElementById("filtro-escolaridade");
   els.contratacao = document.getElementById("filtro-contratacao");
+  els.experiencia = document.getElementById("filtro-experiencia");
   els.data = document.getElementById("filtro-data");
   els.inclusiva = document.getElementById("filtro-inclusiva");
   els.exclusiva = document.getElementById("filtro-exclusiva");
@@ -137,6 +139,10 @@ function textoCampo(vaga, campo) {
   return String((vaga && vaga[campo]) || "").trim();
 }
 
+function municipioDaVaga(vaga) {
+  return textoCampo(vaga, "municipio_trabalho");
+}
+
 function passaFiltroLista(vaga, filtro, campo) {
   if (!filtro) return true;
   return normalizar(textoCampo(vaga, campo)) === normalizar(filtro);
@@ -184,7 +190,7 @@ function assinaturaBase(data) {
         vaga.identificacao_vagas,
         qtde(vaga),
         vaga.ocupacao,
-        vaga.municipio,
+        vaga.municipio_trabalho,
         vaga.unidade,
         vaga.data_disponibilidade || vaga.data,
         vaga.edicao_postagem,
@@ -219,12 +225,14 @@ function aplicarValoresFiltroNosCampos() {
   selecionarSeExistir(els.municipio, state.filtros.municipio);
   selecionarSeExistir(els.escolaridade, state.filtros.escolaridade);
   selecionarSeExistir(els.contratacao, state.filtros.tipoContratacao);
+  selecionarSeExistir(els.experiencia, state.filtros.experiencia);
   if (els.inclusiva) els.inclusiva.checked = Boolean(state.filtros.inclusiva);
   if (els.exclusiva) els.exclusiva.checked = Boolean(state.filtros.exclusiva);
   state.filtros.unidade = els.unidade?.value || "";
   state.filtros.municipio = els.municipio?.value || "";
   state.filtros.escolaridade = els.escolaridade?.value || "";
   state.filtros.tipoContratacao = els.contratacao?.value || "";
+  state.filtros.experiencia = els.experiencia?.value || "";
 }
 
 async function carregarVagas() {
@@ -248,6 +256,7 @@ async function atualizarVagas() {
   state.filtros.municipio = els.municipio?.value || "";
   state.filtros.escolaridade = els.escolaridade?.value || "";
   state.filtros.tipoContratacao = els.contratacao?.value || "";
+  state.filtros.experiencia = els.experiencia?.value || "";
   state.filtros.dataPeriodo = "mais-recente";
   lerFiltrosPcd();
   state.atualizandoVagas = true;
@@ -308,12 +317,15 @@ function preencherSelect(select, valores, textoInicial) {
 
 function popularFiltrosSuspensos() {
   preencherSelect(els.unidade, unicoOrdenado("unidade"), "Todas");
-  preencherSelect(els.municipio, unicoOrdenado("municipio"), "Todos");
+  preencherSelect(els.municipio, unicoOrdenado("municipio_trabalho"), "Todos");
   if (els.escolaridade) {
     preencherSelect(els.escolaridade, unicoOrdenado("escolaridade"), "Todas");
   }
   if (els.contratacao) {
     preencherSelect(els.contratacao, unicoOrdenado("tipo_contratacao"), "Todos");
+  }
+  if (els.experiencia) {
+    preencherSelect(els.experiencia, unicoOrdenado("experiencia"), "Experiência");
   }
 
   const datalist = document.getElementById("lista-ocupacoes");
@@ -352,15 +364,16 @@ function aplicarFiltrosDaURL() {
 }
 
 function aplicarFiltros(opcoes = {}) {
-  const { cargo, unidade, municipio, escolaridade, tipoContratacao, dataPeriodo } = state.filtros;
+  const { cargo, unidade, municipio, escolaridade, tipoContratacao, experiencia, dataPeriodo } = state.filtros;
   const resetarPagina = opcoes.resetarPagina !== false;
 
   state.filtradas = state.vagas.filter((vaga) => {
     if (cargo && !contem(vaga.ocupacao, cargo)) return false;
     if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
-    if (municipio && normalizar(vaga.municipio) !== normalizar(municipio)) return false;
+    if (municipio && normalizar(municipioDaVaga(vaga)) !== normalizar(municipio)) return false;
     if (!passaFiltroLista(vaga, escolaridade, "escolaridade")) return false;
     if (!passaFiltroLista(vaga, tipoContratacao, "tipo_contratacao")) return false;
+    if (!passaFiltroLista(vaga, experiencia, "experiencia")) return false;
     if (!dataDentroPeriodo(dataFiltro(vaga), dataPeriodo)) return false;
     if (!passaFiltroPcd(vaga)) return false;
     return true;
@@ -424,6 +437,7 @@ function atualizarStatus() {
     state.filtros.municipio ||
     state.filtros.escolaridade ||
     state.filtros.tipoContratacao ||
+    state.filtros.experiencia ||
     state.filtros.inclusiva ||
     state.filtros.exclusiva;
 
@@ -457,9 +471,10 @@ function vagasDoMunicipioParaCompartilhar(municipio) {
   const alvo = normalizar(municipio);
   return state.vagas
     .filter((vaga) => {
-      if (normalizar(vaga.municipio) !== alvo) return false;
+      if (normalizar(municipioDaVaga(vaga)) !== alvo) return false;
       if (!passaFiltroLista(vaga, state.filtros.escolaridade, "escolaridade")) return false;
       if (!passaFiltroLista(vaga, state.filtros.tipoContratacao, "tipo_contratacao")) return false;
+      if (!passaFiltroLista(vaga, state.filtros.experiencia, "experiencia")) return false;
       if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
       if (!passaFiltroPcd(vaga)) return false;
       return true;
@@ -491,7 +506,7 @@ function textoRankingVaga(vaga) {
 }
 
 function textoRankingPorTipo(vaga, tipo) {
-  if (tipo === "cidades") return String(vaga.municipio || "").trim();
+  if (tipo === "cidades") return municipioDaVaga(vaga);
   if (tipo === "unidades") return String(vaga.unidade || "").trim();
   return textoRankingVaga(vaga);
 }
@@ -636,6 +651,7 @@ function aplicarBuscaPopular(valor) {
   state.filtros.municipio = els.municipio.value;
   state.filtros.escolaridade = els.escolaridade?.value || "";
   state.filtros.tipoContratacao = els.contratacao?.value || "";
+  state.filtros.experiencia = els.experiencia?.value || "";
   state.filtros.dataPeriodo = "mais-recente";
   lerFiltrosPcd();
   aplicarFiltros();
@@ -839,6 +855,7 @@ function limparBusca() {
     municipio: "",
     escolaridade: "",
     tipoContratacao: "",
+    experiencia: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,
@@ -848,6 +865,7 @@ function limparBusca() {
   els.municipio.value = "";
   if (els.escolaridade) els.escolaridade.value = "";
   if (els.contratacao) els.contratacao.value = "";
+  if (els.experiencia) els.experiencia.value = "";
   atualizarCampoDataTravada();
   if (els.inclusiva) els.inclusiva.checked = false;
   if (els.exclusiva) els.exclusiva.checked = false;
@@ -890,6 +908,7 @@ function bindEvents() {
     state.filtros.municipio = els.municipio.value;
     state.filtros.escolaridade = els.escolaridade?.value || "";
     state.filtros.tipoContratacao = els.contratacao?.value || "";
+    state.filtros.experiencia = els.experiencia?.value || "";
     state.filtros.dataPeriodo = "mais-recente";
     lerFiltrosPcd();
     aplicarFiltros();
@@ -922,7 +941,7 @@ function bindEvents() {
     });
   });
 
-  [els.escolaridade, els.contratacao].forEach((select) => {
+  [els.escolaridade, els.contratacao, els.experiencia].forEach((select) => {
     select?.addEventListener("change", aplicarFiltrosDaTela);
   });
 

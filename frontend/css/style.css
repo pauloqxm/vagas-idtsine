@@ -527,6 +527,33 @@ h1 {
   gap: 0.55rem;
 }
 
+.search-actions-row__experiencia {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 0.35rem 0 0.95rem;
+  background: #fff;
+  border-radius: 999px;
+  color: var(--idt-blue);
+}
+
+.search-actions-row__experiencia select {
+  border: 0;
+  background: transparent;
+  color: var(--idt-blue);
+  font: inherit;
+  font-weight: 800;
+  min-height: 44px;
+  min-width: 10.5rem;
+  padding-right: 0.4rem;
+  cursor: pointer;
+}
+
+.search-actions-row__experiencia select:focus-visible {
+  outline: 2px solid var(--idt-orange);
+  outline-offset: 2px;
+}
+
 .search-actions-row__pcd {
   display: inline-flex;
   align-items: center;

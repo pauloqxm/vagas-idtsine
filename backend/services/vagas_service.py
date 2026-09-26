@@ -702,7 +702,13 @@ def get_unidades_coords() -> Dict[str, Dict[str, Any]]:
 
 def get_municipios() -> List[str]:
     vagas = get_vagas()
-    return sorted({str(v.get("municipio") or "").strip() for v in vagas if v.get("municipio")})
+    return sorted(
+        {
+            str(v.get("municipio_trabalho") or "").strip()
+            for v in vagas
+            if v.get("municipio_trabalho")
+        }
+    )
 
 
 def invalidate_cache() -> None:

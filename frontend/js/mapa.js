@@ -146,7 +146,7 @@ function vagasFiltradas() {
     }
     if (
       filtros.municipio &&
-      normalizar(props.municipio) !== normalizar(filtros.municipio)
+      normalizar(props.municipio_trabalho) !== normalizar(filtros.municipio)
     ) {
       return false;
     }
@@ -277,7 +277,7 @@ function labelPeriodoData() {
 
 function popularFiltros() {
   preencherSelect("map-filter-unidade", valoresUnicosDasVagas("unidade"), "Todas");
-  preencherSelect("map-filter-municipio", valoresUnicosDasVagas("municipio"), "Todos");
+  preencherSelect("map-filter-municipio", valoresUnicosDasVagas("municipio_trabalho"), "Todos");
 }
 
 function aplicarFiltroUnidadesNoMapa() {
@@ -406,7 +406,7 @@ function renderTabelaVagas() {
           </td>
           <td data-label="Quantidade">${Number(p.qtde_vagas) || 1}</td>
           <td data-label="PCD"><span class="map-vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotuloPcdProps(p))}</span></td>
-          <td data-label="Município">${escapeHtml(p.municipio || "Não informado")}</td>
+          <td data-label="Município">${escapeHtml(p.municipio_trabalho || "Não informado")}</td>
           <td data-label="Unidade">${escapeHtml(p.unidade || "Não informado")}</td>
         </tr>
       `;
@@ -684,7 +684,7 @@ function focarVagaDaUrl() {
   );
   if (!feature) return false;
   filtros.unidade = String((feature.properties && feature.properties.unidade) || "");
-  filtros.municipio = String((feature.properties && feature.properties.municipio) || "");
+  filtros.municipio = String((feature.properties && feature.properties.municipio_trabalho) || "");
   filtros.posto = codigoPosto(feature.properties);
   const unidadeSelect = document.getElementById("map-filter-unidade");
   const municipioSelect = document.getElementById("map-filter-municipio");
