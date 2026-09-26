@@ -248,11 +248,22 @@ function prefetchImagemUnidade() {
   });
 }
 
-function valoresUnicosDasVagas(campo) {
+function vagasNoPeriodo() {
   const features = vagasGeojson && vagasGeojson.features ? vagasGeojson.features : [];
+  return features.filter((feature) =>
+    dataDentroPeriodo(dataFiltro(feature.properties || {}), filtros.dataPeriodo)
+  );
+}
+
+function valoresRelacionados(campo, outroCampo, outroValor) {
+  const alvo = normalizar(outroValor);
   return [
     ...new Set(
-      features
+      vagasNoPeriodo()
+        .filter((feature) => {
+          if (!alvo) return true;
+          return normalizar((feature.properties || {})[outroCampo]) === alvo;
+        })
         .map((feature) => String((feature.properties || {})[campo] || "").trim())
         .filter(Boolean)
     ),
@@ -270,14 +281,33 @@ function preencherSelect(id, valores, labelInicial) {
   ].join("");
 }
 
+function selecionarOpcao(select, valor) {
+  if (!select) return "";
+  const alvo = normalizar(valor);
+  const match = [...select.options].find((opt) => opt.value && normalizar(opt.value) === alvo);
+  select.value = match ? match.value : "";
+  return select.value;
+}
+
+function atualizarOpcoesFiltrosRelacionados() {
+  const unidadeSelect = document.getElementById("map-filter-unidade");
+  const municipioSelect = document.getElementById("map-filter-municipio");
+  const unidades = valoresRelacionados("unidade", "municipio_trabalho", filtros.municipio);
+  preencherSelect("map-filter-unidade", unidades, "Todas");
+  filtros.unidade = selecionarOpcao(unidadeSelect, filtros.unidade);
+
+  const municipios = valoresRelacionados("municipio_trabalho", "unidade", filtros.unidade);
+  preencherSelect("map-filter-municipio", municipios, "Todos");
+  filtros.municipio = selecionarOpcao(municipioSelect, filtros.municipio);
+}
+
 function labelPeriodoData() {
   const data = formatarDataBR(dataMaisRecente);
   return data ? `Data mais recente (${data})` : "Data mais recente";
 }
 
 function popularFiltros() {
-  preencherSelect("map-filter-unidade", valoresUnicosDasVagas("unidade"), "Todas");
-  preencherSelect("map-filter-municipio", valoresUnicosDasVagas("municipio_trabalho"), "Todos");
+  atualizarOpcoesFiltrosRelacionados();
 }
 
 function aplicarFiltroUnidadesNoMapa() {
@@ -469,8 +499,7 @@ function aplicarFiltrosMapa() {
 function selecionarMunicipio(municipio) {
   filtros.municipio = municipio || "";
   filtros.posto = "";
-  const select = document.getElementById("map-filter-municipio");
-  if (select) select.value = filtros.municipio;
+  atualizarOpcoesFiltrosRelacionados();
   aplicarFiltrosMapa();
 }
 
@@ -487,8 +516,7 @@ function selecionarUnidade(unidade, codigo = "") {
     filtros.unidade = unidade || "";
     filtros.posto = "";
   }
-  const select = document.getElementById("map-filter-unidade");
-  if (select) select.value = filtros.unidade;
+  atualizarOpcoesFiltrosRelacionados();
   aplicarFiltrosMapa();
 }
 
@@ -496,10 +524,7 @@ function limparSelecaoMapa() {
   filtros.unidade = "";
   filtros.municipio = "";
   filtros.posto = "";
-  const unidade = document.getElementById("map-filter-unidade");
-  const municipio = document.getElementById("map-filter-municipio");
-  if (unidade) unidade.value = "";
-  if (municipio) municipio.value = "";
+  atualizarOpcoesFiltrosRelacionados();
   if (popupMapaAberto()) fecharPopupMapa();
   aplicarFiltrosMapa();
 }
@@ -686,10 +711,7 @@ function focarVagaDaUrl() {
   filtros.unidade = String((feature.properties && feature.properties.unidade) || "");
   filtros.municipio = String((feature.properties && feature.properties.municipio_trabalho) || "");
   filtros.posto = codigoPosto(feature.properties);
-  const unidadeSelect = document.getElementById("map-filter-unidade");
-  const municipioSelect = document.getElementById("map-filter-municipio");
-  if (unidadeSelect) unidadeSelect.value = filtros.unidade;
-  if (municipioSelect) municipioSelect.value = filtros.municipio;
+  atualizarOpcoesFiltrosRelacionados();
   aplicarFiltrosMapa();
   map.flyTo({ center: feature.geometry.coordinates, zoom: 13, speed: 0.9 });
   abrirPopupMapa(buildVagaPopupHtml(feature.properties), dadosAgendamentoDeProps(feature.properties), "vaga");
@@ -706,6 +728,7 @@ function configurarFiltros() {
     unidade.addEventListener("change", () => {
       filtros.unidade = unidade.value;
       filtros.posto = "";
+      atualizarOpcoesFiltrosRelacionados();
       aplicarFiltrosMapa();
     });
   }
@@ -714,6 +737,7 @@ function configurarFiltros() {
     municipio.addEventListener("change", () => {
       filtros.municipio = municipio.value;
       filtros.posto = "";
+      atualizarOpcoesFiltrosRelacionados();
       aplicarFiltrosMapa();
     });
   }
