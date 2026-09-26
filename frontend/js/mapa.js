@@ -349,6 +349,11 @@ function atualizarResumo() {
   const unidades = new Set(
     vagas.map((feature) => codigoPosto(feature.properties)).filter(Boolean)
   );
+  const municipios = new Set(
+    vagas
+      .map((feature) => String((feature.properties || {}).municipio_trabalho || "").trim())
+      .filter(Boolean)
+  );
   const titulo =
     filtros.unidade || filtros.municipio
       ? [filtros.unidade, filtros.municipio].filter(Boolean).join(" - ")
@@ -362,6 +367,7 @@ function atualizarResumo() {
       <div class="map-results-stat"><span>Inclusiva</span><b>${inclusiva}</b></div>
       <div class="map-results-stat"><span>Exclusiva PCD</span><b>${exclusiva}</b></div>
       <div class="map-results-stat"><span>Unidades com vagas</span><b>${unidades.size}</b></div>
+      <div class="map-results-stat"><span>Municípios com vagas</span><b>${municipios.size}</b></div>
     </div>
   `;
 }
