@@ -852,6 +852,8 @@ function buildVagaPopupHtml(props) {
         ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
+        ${htmlLinhaPopup("Experiência", escapeHtml(String(props.experiencia || "").trim() || "Não informado"))}
+        ${htmlLinhaPopup("Município do trabalho", escapeHtml(String(props.municipio_trabalho || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Perfil", escapeHtml(rotuloPcdProps(props)))}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
         ${htmlLinhaPopup("E-mail", emailHtml)}

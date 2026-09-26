@@ -144,6 +144,8 @@ const SalvarVagas = {
             <span><strong>Unidade:</strong> ${this.escapeHtml(vaga.unidade || "Não informado")}</span>
             <span><strong>Escolaridade:</strong> ${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</span>
             <span><strong>Contratação:</strong> ${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</span>
+            <span><strong>Experiência:</strong> ${this.escapeHtml(String(vaga.experiencia || "").trim() || "Não informado")}</span>
+            <span><strong>Município do trabalho:</strong> ${this.escapeHtml(String(vaga.municipio_trabalho || "").trim() || "Não informado")}</span>
           </div>
           <div class="print-card__tags">
             ${
@@ -176,6 +178,8 @@ const SalvarVagas = {
             <td>${this.escapeHtml(vaga.unidade || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.escolaridade || "").trim() || "Não informado")}</td>
             <td>${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</td>
+            <td>${this.escapeHtml(String(vaga.experiencia || "").trim() || "Não informado")}</td>
+            <td>${this.escapeHtml(String(vaga.municipio_trabalho || "").trim() || "Não informado")}</td>
             <td class="print-pcd print-pcd--${categoria}">${this.escapeHtml(rotulo)}</td>
           </tr>
         `;
@@ -192,6 +196,8 @@ const SalvarVagas = {
               <th>Unidade</th>
               <th>Escolaridade</th>
               <th>Contratação</th>
+              <th>Experiência</th>
+              <th>Município do trabalho</th>
               <th>Direcionamento</th>
             </tr>
           </thead>
@@ -468,12 +474,20 @@ const SalvarVagas = {
       .print-vagas-table th:nth-child(4),
       .print-vagas-table td:nth-child(4),
       .print-vagas-table th:nth-child(5),
-      .print-vagas-table td:nth-child(5) {
+      .print-vagas-table td:nth-child(5),
+      .print-vagas-table th:nth-child(6),
+      .print-vagas-table td:nth-child(6) {
         white-space: nowrap;
       }
 
-      .print-vagas-table th:nth-child(6),
-      .print-vagas-table td:nth-child(6) {
+      .print-vagas-table th:nth-child(7),
+      .print-vagas-table td:nth-child(7) {
+        white-space: normal;
+        overflow-wrap: break-word;
+      }
+
+      .print-vagas-table th:nth-child(8),
+      .print-vagas-table td:nth-child(8) {
         width: 1%;
         white-space: nowrap;
         text-align: center;

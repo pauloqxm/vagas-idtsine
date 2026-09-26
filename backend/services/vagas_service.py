@@ -50,6 +50,20 @@ def _limpar_texto(val: str) -> str:
     return "" if s in ("", "-", "—") else s
 
 
+def _limpar_texto_informado(val: Any) -> str:
+    s = _limpar_texto(val)
+    if _chave_coluna(s) in {"", "nao informado"}:
+        return ""
+    return s
+
+
+def _municipio_trabalho_api(val: Any) -> str:
+    s = _limpar_texto_informado(val)
+    if s.lower().startswith("ce-"):
+        return s[3:].strip()
+    return s
+
+
 def _parse_int(val: str) -> int:
     try:
         return max(1, int(float(str(val).strip() or "1")))
@@ -353,6 +367,9 @@ def _row_para_vaga(row: List[str]) -> Optional[Dict[str, Any]]:
             "endereco": info.get("endereco") or "",
             "bairro": info.get("bairro") or "",
             "tipo_contratacao": str(row[14] or "").strip(),
+            "escolaridade": "",
+            "experiencia": "",
+            "municipio_trabalho": "",
             "observacao": str(row[15] or "").strip() or None,
             "gestao": info.get("gestao", ""),
         }
@@ -428,7 +445,9 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             _limpar_texto(item.get("tipoContratacao") or "")
             or _limpar_texto(item.get("tipoVaga") or "")
         ),
-        "escolaridade": _limpar_texto(item.get("escolaridade") or ""),
+        "escolaridade": _limpar_texto_informado(item.get("escolaridade")),
+        "experiencia": _limpar_texto_informado(item.get("experiencia")),
+        "municipio_trabalho": _municipio_trabalho_api(item.get("municipioTrabalho")),
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),
         "edicao_postagem": _normalizar_edicao_postagem(item.get("edicaoPostagem")),
