@@ -60,6 +60,12 @@
 
     <section class="container map-filters" aria-label="Filtros do mapa">
       <label>
+        <span>Região</span>
+        <select id="map-filter-regiao">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>
         <span>Unidade</span>
         <select id="map-filter-unidade">
           <option value="">Todas</option>
@@ -79,6 +85,10 @@
       </label>
       <button id="map-filter-clear" type="button" class="btn btn-light">Limpar filtros</button>
     </section>
+
+    <div id="map-results" class="container map-results" aria-live="polite">
+      Selecione uma unidade, município ou região para ver a quantidade de vagas.
+    </div>
 
     <div class="container map-locate-bar">
       <button type="button" id="map-locate-btn" class="map-locate-btn" aria-label="Ativar minha localização no mapa">
@@ -100,9 +110,6 @@
           </button>
         </span>
         <span><strong class="legend-user"></strong> Sua localização</span>
-      </div>
-      <div id="map-results" class="map-results" aria-live="polite">
-        Selecione uma unidade ou município para ver a quantidade de vagas.
       </div>
       <section id="map-vagas-table-section" class="map-vagas-table-section hidden" aria-label="Relação de vagas filtradas">
         <h2>Vagas encontradas</h2>

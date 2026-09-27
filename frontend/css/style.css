@@ -1910,10 +1910,10 @@ h1 {
 
 .map-filters {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto;
   gap: 0.8rem;
   align-items: end;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   padding: 1rem;
   background: #fff;
   border: 1px solid var(--border);
@@ -1991,7 +1991,8 @@ h1 {
 }
 
 .map-results {
-  margin-top: 1rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
   padding: 1rem;
   background: #fff;
   border: 1px solid var(--border);
@@ -2403,6 +2404,10 @@ body.map-popup-open {
 @media (max-width: 1100px) {
   .map-results-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .map-filters {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

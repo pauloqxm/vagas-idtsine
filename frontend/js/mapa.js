@@ -47,6 +47,7 @@ let camadaCirculosVisivel = true;
 const filtros = {
   unidade: "",
   municipio: "",
+  regiao: "",
   posto: "",
   dataPeriodo: "mais-recente",
 };
@@ -73,6 +74,14 @@ function normalizar(txt) {
 
 function municipioDaFeature(props) {
   const keys = ["Municipio", "MUNICIPIO", "municipio", "NM_MUN", "NOME"];
+  for (const key of keys) {
+    if (props && props[key]) return String(props[key]).trim();
+  }
+  return "";
+}
+
+function regiaoDaFeature(props) {
+  const keys = ["Região", "Regiao", "REGIÃO", "regiao", "REGIAO", "regional"];
   for (const key of keys) {
     if (props && props[key]) return String(props[key]).trim();
   }
@@ -132,7 +141,11 @@ function totaisVagasPorMunicipio() {
     const nome = String((feature.properties || {}).municipio_trabalho || "").trim();
     if (!nome) return;
     const chave = normalizar(nome);
-    const atual = mapa.get(chave) || { nome, total: 0 };
+    const atual = mapa.get(chave) || {
+      nome,
+      regional: String((feature.properties || {}).regional || "").trim(),
+      total: 0,
+    };
     atual.total += qtdeFeature(feature);
     mapa.set(chave, atual);
   });
@@ -148,6 +161,7 @@ function geojsonCirculosMunicipio() {
       type: "Feature",
       properties: {
         municipio: centro.nome,
+        regional: item.regional || "",
         qtde_vagas: item.total,
       },
       geometry: { type: "Point", coordinates: centro.coord },
@@ -214,7 +228,9 @@ function adicionarCirculosMunicipio() {
     event.originalEvent.__cliqueCirculo = true;
     const feature = event.features && event.features[0];
     const municipio = String((feature && feature.properties && feature.properties.municipio) || "").trim();
-    if (municipio) selecionarMunicipio(municipio);
+    if (municipio) {
+      selecionarMunicipio(municipio, (feature.properties && feature.properties.regional) || "");
+    }
   });
 }
 
@@ -291,6 +307,9 @@ function vagasFiltradas() {
       filtros.municipio &&
       normalizar(props.municipio_trabalho) !== normalizar(filtros.municipio)
     ) {
+      return false;
+    }
+    if (filtros.regiao && normalizar(props.regional) !== normalizar(filtros.regiao)) {
       return false;
     }
     if (!dataDentroPeriodo(dataFiltro(props), filtros.dataPeriodo)) return false;
@@ -398,15 +417,38 @@ function vagasNoPeriodo() {
   );
 }
 
-function valoresRelacionados(campo, outroCampo, outroValor) {
-  const alvo = normalizar(outroValor);
+function vagasParaOpcoesFiltro(ignorar = "") {
+  return vagasNoPeriodo().filter((feature) => {
+    const props = feature.properties || {};
+    if (
+      ignorar !== "regiao" &&
+      filtros.regiao &&
+      normalizar(props.regional) !== normalizar(filtros.regiao)
+    ) {
+      return false;
+    }
+    if (
+      ignorar !== "unidade" &&
+      filtros.unidade &&
+      normalizar(props.unidade) !== normalizar(filtros.unidade)
+    ) {
+      return false;
+    }
+    if (
+      ignorar !== "municipio" &&
+      filtros.municipio &&
+      normalizar(props.municipio_trabalho) !== normalizar(filtros.municipio)
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function valoresUnicos(campo, ignorar = "") {
   return [
     ...new Set(
-      vagasNoPeriodo()
-        .filter((feature) => {
-          if (!alvo) return true;
-          return normalizar((feature.properties || {})[outroCampo]) === alvo;
-        })
+      vagasParaOpcoesFiltro(ignorar)
         .map((feature) => String((feature.properties || {})[campo] || "").trim())
         .filter(Boolean)
     ),
@@ -433,14 +475,17 @@ function selecionarOpcao(select, valor) {
 }
 
 function atualizarOpcoesFiltrosRelacionados() {
+  const regiaoSelect = document.getElementById("map-filter-regiao");
   const unidadeSelect = document.getElementById("map-filter-unidade");
   const municipioSelect = document.getElementById("map-filter-municipio");
-  const unidades = valoresRelacionados("unidade", "municipio_trabalho", filtros.municipio);
-  preencherSelect("map-filter-unidade", unidades, "Todas");
+
+  preencherSelect("map-filter-regiao", valoresUnicos("regional", "regiao"), "Todas");
+  filtros.regiao = selecionarOpcao(regiaoSelect, filtros.regiao);
+
+  preencherSelect("map-filter-unidade", valoresUnicos("unidade", "unidade"), "Todas");
   filtros.unidade = selecionarOpcao(unidadeSelect, filtros.unidade);
 
-  const municipios = valoresRelacionados("municipio_trabalho", "unidade", filtros.unidade);
-  preencherSelect("map-filter-municipio", municipios, "Todos");
+  preencherSelect("map-filter-municipio", valoresUnicos("municipio_trabalho", "municipio"), "Todos");
   filtros.municipio = selecionarOpcao(municipioSelect, filtros.municipio);
 }
 
@@ -503,8 +548,8 @@ function atualizarResumo() {
       .filter(Boolean)
   );
   const titulo =
-    filtros.unidade || filtros.municipio
-      ? [filtros.unidade, filtros.municipio].filter(Boolean).join(" - ")
+    filtros.regiao || filtros.unidade || filtros.municipio
+      ? [filtros.regiao, filtros.unidade, filtros.municipio].filter(Boolean).join(" - ")
       : "Todas as unidades e municípios";
 
   el.innerHTML = `
@@ -528,7 +573,7 @@ function renderTabelaVagas() {
   const paginacao = document.getElementById("map-vagas-paginacao");
   if (!section || !summary || !tbody) return;
 
-  const deveMostrar = Boolean(filtros.unidade || filtros.municipio);
+  const deveMostrar = Boolean(filtros.unidade || filtros.municipio || filtros.regiao);
   section.classList.toggle("hidden", !deveMostrar);
   if (!deveMostrar) {
     tbody.innerHTML = "";
@@ -652,9 +697,18 @@ function aplicarFiltrosMapa() {
   renderTabelaVagas();
 }
 
-function selecionarMunicipio(municipio) {
+function selecionarMunicipio(municipio, regiao = "") {
   filtros.municipio = municipio || "";
   filtros.posto = "";
+  if (regiao) {
+    filtros.regiao = regiao;
+  } else if (municipio) {
+    const alvo = normalizar(municipio);
+    const vaga = vagasNoPeriodo().find(
+      (feature) => normalizar((feature.properties || {}).municipio_trabalho) === alvo
+    );
+    filtros.regiao = String((vaga && vaga.properties && vaga.properties.regional) || "").trim();
+  }
   atualizarOpcoesFiltrosRelacionados();
   aplicarFiltrosMapa();
 }
@@ -679,6 +733,7 @@ function selecionarUnidade(unidade, codigo = "") {
 function limparSelecaoMapa() {
   filtros.unidade = "";
   filtros.municipio = "";
+  filtros.regiao = "";
   filtros.posto = "";
   atualizarOpcoesFiltrosRelacionados();
   if (popupMapaAberto()) fecharPopupMapa();
@@ -717,7 +772,7 @@ function adicionarRegioes(geojson, paleta) {
     if (event.originalEvent && event.originalEvent.__cliqueCirculo) return;
     const feature = event.features && event.features[0];
     const municipio = municipioDaFeature(feature && feature.properties);
-    if (municipio) selecionarMunicipio(municipio);
+    if (municipio) selecionarMunicipio(municipio, regiaoDaFeature(feature && feature.properties));
   });
 
   map.on("mouseenter", CE_REGIOES_FILL, () => {
@@ -868,6 +923,7 @@ function focarVagaDaUrl() {
   if (!feature) return false;
   filtros.unidade = String((feature.properties && feature.properties.unidade) || "");
   filtros.municipio = String((feature.properties && feature.properties.municipio_trabalho) || "");
+  filtros.regiao = String((feature.properties && feature.properties.regional) || "");
   filtros.posto = codigoPosto(feature.properties);
   atualizarOpcoesFiltrosRelacionados();
   aplicarFiltrosMapa();
@@ -879,8 +935,17 @@ function focarVagaDaUrl() {
 function configurarFiltros() {
   const unidade = document.getElementById("map-filter-unidade");
   const municipio = document.getElementById("map-filter-municipio");
+  const regiao = document.getElementById("map-filter-regiao");
   const data = document.getElementById("map-filter-data");
   const limpar = document.getElementById("map-filter-clear");
+
+  if (regiao) {
+    regiao.addEventListener("change", () => {
+      filtros.regiao = regiao.value;
+      atualizarOpcoesFiltrosRelacionados();
+      aplicarFiltrosMapa();
+    });
+  }
 
   if (unidade) {
     unidade.addEventListener("change", () => {
