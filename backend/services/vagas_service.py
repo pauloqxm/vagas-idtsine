@@ -449,7 +449,7 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "escolaridade": _limpar_texto_informado(item.get("escolaridade")),
         "experiencia": _limpar_texto_informado(item.get("experiencia")),
         "municipio_trabalho": _municipio_trabalho_api(item.get("municipioTrabalho")),
-        "regional": _limpar_texto_informado(item.get("regional")),
+        "regional": "",
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),
         "edicao_postagem": _normalizar_edicao_postagem(item.get("edicaoPostagem")),
@@ -624,6 +624,14 @@ def _manter_extrato_mais_recente(vagas: List[Dict[str, Any]]) -> List[Dict[str, 
     return [vaga for vaga in vagas if _data_ord(vaga) == alvo]
 
 
+def _atribuir_regiao_geojson(vagas: List[Dict[str, Any]]) -> None:
+    """Região vem do ce_regioes.geojson; o município continua o da API."""
+    from backend.services.regioes_service import regiao_do_municipio
+
+    for vaga in vagas:
+        vaga["regional"] = regiao_do_municipio(vaga.get("municipio_trabalho") or "")
+
+
 # ── API pública ───────────────────────────────────────────────────────────────
 
 def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
@@ -641,6 +649,7 @@ def get_vagas(use_cache: bool = True) -> List[Dict[str, Any]]:
         vagas = _manter_extrato_mais_recente(vagas)
         vagas = _filtrar_edicao_postagem(vagas)
         vagas = _deduplicar_vagas(vagas)
+        _atribuir_regiao_geojson(vagas)
 
         edicao = next((str(vaga.get("edicao_postagem") or "") for vaga in vagas if vaga.get("edicao_postagem")), "")
         CACHE["data"] = vagas
