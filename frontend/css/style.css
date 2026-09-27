@@ -1988,29 +1988,6 @@ h1 {
   margin-top: 0.75rem;
 }
 
-.map-results-regioes {
-  margin-top: 1rem;
-}
-
-.map-results-regioes__title {
-  display: block;
-  color: #5b21b6;
-  font-size: 0.92rem;
-  font-weight: 800;
-}
-
-.map-results-grid--regioes {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.map-results-stat--regiao {
-  background: #f5f3ff;
-}
-
-.map-results-stat--regiao b {
-  color: #5b21b6;
-}
-
 .map-results-stat {
   padding: 0.8rem;
   border-radius: 14px;
@@ -2394,7 +2371,7 @@ body.map-popup-open {
 }
 
 @media (max-width: 1100px) {
-  .map-results-grid:not(.map-results-grid--regioes) {
+  .map-results-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -2470,7 +2447,7 @@ body.map-popup-open {
     display: block;
   }
 
-  .map-results-grid:not(.map-results-grid--regioes) {
+  .map-results-grid {
     grid-template-columns: 1fr;
   }
 

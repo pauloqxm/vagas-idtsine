@@ -354,35 +354,15 @@ function atualizarResumo() {
       .map((feature) => String((feature.properties || {}).municipio_trabalho || "").trim())
       .filter(Boolean)
   );
-  const totaisRegiao = new Map();
-  vagas.forEach((feature) => {
-    const texto = String((feature.properties || {}).regional || "").trim();
-    if (!texto) return;
-    const chave = texto.toLocaleLowerCase("pt-BR");
-    const atual = totaisRegiao.get(chave) || { texto, total: 0 };
-    atual.total += qtdeFeature(feature);
-    totaisRegiao.set(chave, atual);
-  });
-  const rankingRegioes = [...totaisRegiao.values()].sort(
-    (a, b) => b.total - a.total || a.texto.localeCompare(b.texto, "pt-BR")
+  const regioes = new Set(
+    vagas
+      .map((feature) => String((feature.properties || {}).regional || "").trim())
+      .filter(Boolean)
   );
   const titulo =
     filtros.unidade || filtros.municipio
       ? [filtros.unidade, filtros.municipio].filter(Boolean).join(" - ")
       : "Todas as unidades e municípios";
-  const htmlRegioes = rankingRegioes.length
-    ? `<div class="map-results-regioes">
-        <span class="map-results-regioes__title">Vagas por região</span>
-        <div class="map-results-grid map-results-grid--regioes">
-          ${rankingRegioes
-            .map(
-              (item) =>
-                `<div class="map-results-stat map-results-stat--regiao"><span>${escapeHtml(item.texto)}</span><b>${item.total}</b></div>`
-            )
-            .join("")}
-        </div>
-      </div>`
-    : "";
 
   el.innerHTML = `
     <strong>${escapeHtml(titulo)}</strong>
@@ -393,9 +373,8 @@ function atualizarResumo() {
       <div class="map-results-stat"><span>Exclusiva PCD</span><b>${exclusiva}</b></div>
       <div class="map-results-stat"><span>Unidades com vagas</span><b>${unidades.size}</b></div>
       <div class="map-results-stat"><span>Municípios com vagas</span><b>${municipios.size}</b></div>
-      <div class="map-results-stat"><span>Regiões com vagas</span><b>${rankingRegioes.length}</b></div>
+      <div class="map-results-stat"><span>Regiões com vagas</span><b>${regioes.size}</b></div>
     </div>
-    ${htmlRegioes}
   `;
 }
 
