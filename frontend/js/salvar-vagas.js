@@ -680,6 +680,76 @@ const SalvarVagas = {
         text-align: center;
       }
 
+      .print-hero {
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+        margin-bottom: 12px;
+        padding: 16px 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #00a859 0%, #007a42 100%);
+        color: #fff;
+        text-align: center;
+      }
+
+      .print-hero b {
+        font-size: 36px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .print-hero span {
+        max-width: 28rem;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .print-rank {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 6px;
+      }
+
+      .print-rank li {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .print-rank b {
+        color: #003d68;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+
+      .print-rank--frase li {
+        display: block;
+        padding-left: 0.9rem;
+        position: relative;
+        font-weight: 600;
+      }
+
+      .print-rank--frase li::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        color: #008f4b;
+      }
+
+      .print-card__note {
+        margin: 2px 0 0;
+        color: #5f6b84;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
       @media print {
         body { background: #fff; }
         .print-card { box-shadow: none; }
@@ -1433,4 +1503,233 @@ const SalvarVagas = {
       this.definirEstadoBotao(false);
     }
   },
+
+  formatarNumero(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR");
+  },
+
+  rankingPor(vagas, getter, limite) {
+    const mapa = new Map();
+    (vagas || []).forEach((vaga) => {
+      const texto = String(getter(vaga) || "").trim();
+      if (!texto) return;
+      const chave = this.normalizar(texto);
+      const atual = mapa.get(chave) || { texto, total: 0 };
+      atual.total += this.qtde(vaga);
+      mapa.set(chave, atual);
+    });
+    return [...mapa.values()]
+      .sort((a, b) => b.total - a.total || a.texto.localeCompare(b.texto, "pt-BR"))
+      .slice(0, limite);
+  },
+
+  frasesImpacto({ total, inclusiva, municipios, regioes }) {
+    const frases = [];
+    if (total > 0 && inclusiva > 0) {
+      const decimo = Math.max(1, Math.round((inclusiva / total) * 10));
+      frases.push(`Quase ${decimo} em cada 10 vagas do Ceará são inclusivas.`);
+    }
+    if (regioes.length >= 2) {
+      frases.push(`O ${regioes[1].texto} já é o 2º maior polo de vagas do estado.`);
+    } else if (regioes[0]) {
+      frases.push(`O ${regioes[0].texto} concentra a maior parte das vagas do estado.`);
+    }
+    if (municipios > 0) {
+      frases.push(`São ${municipios} municípios com oportunidade aberta.`);
+    }
+    return frases;
+  },
+
+  renderRank(itens) {
+    if (!itens.length) {
+      return `<li>Nenhum dado disponível neste recorte.</li>`;
+    }
+    return itens
+      .map(
+        (item) =>
+          `<li><span>${this.escapeHtml(item.texto)}</span><b>${this.formatarNumero(item.total)}</b></li>`
+      )
+      .join("");
+  },
+
+  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc }) {
+    const totais = this.totaisPcd(vagas);
+    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 4);
+    const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
+    const regioes = this.rankingPor(vagas, (vaga) => vaga.regional, 5);
+    const qtdeMunicipios = new Set(
+      (vagas || []).map((vaga) => String(vaga.municipio_trabalho || "").trim()).filter(Boolean)
+    ).size;
+    const qtdeRegioes = new Set(
+      (vagas || []).map((vaga) => String(vaga.regional || "").trim()).filter(Boolean)
+    ).size;
+    const qtdeUnidades = new Set(
+      (vagas || [])
+        .map((vaga) => String(vaga.posto_atendimento || vaga.unidade || "").trim())
+        .filter(Boolean)
+    ).size;
+    const frases = this.frasesImpacto({
+      total: totais.total,
+      inclusiva: totais.inclusiva,
+      municipios: qtdeMunicipios,
+      regioes,
+    });
+    const dataFonte =
+      this.dataExibicao(ultimaAtualizacao) ||
+      this.dataExibicao((vagas[0] || {}).data_disponibilidade) ||
+      this.dataHojeBR();
+    const geradoEm = this.dataHoraHojeBR();
+    const logo = logoSrc || "https://www.idt.org.br/assets/img/logos/logo_grande.png";
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Relatório visual de vagas - ${this.escapeHtml(dataFonte)}</title>
+  <style>${this.estilos("cards")}</style>
+</head>
+<body>
+  <div class="print-page">
+    <header class="print-header">
+      <div class="print-header__top">
+        <div class="print-header__brand">
+          <img class="print-logo" src="${this.escapeHtml(logo)}" alt="IDT — Instituto de Desenvolvimento do Trabalho" />
+          <h1 class="print-header__title">
+            Vagas de Emprego no Ceará
+            <span>Cartela rápida para entrevista</span>
+          </h1>
+        </div>
+        <div class="print-header__meta">
+          <div>Instituto de Desenvolvimento do Trabalho</div>
+          <div>Fonte: Portal MTb, ${this.escapeHtml(dataFonte)}</div>
+          <div>Gerado em ${geradoEm}</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="print-hero">
+      <b>${this.formatarNumero(totais.total)}</b>
+      <span>Vagas de emprego abertas agora no Ceará</span>
+    </div>
+
+    <div class="print-summary">
+      <span class="print-summary__item">${this.formatarNumero(this.totalOcupacoesUnicas(vagas))} ocupações</span>
+      <span class="print-summary__item">${this.formatarNumero(qtdeMunicipios)} municípios</span>
+      <span class="print-summary__item">${this.formatarNumero(qtdeRegioes)} regiões</span>
+      <span class="print-summary__item">${this.formatarNumero(qtdeUnidades)} unidades Sine</span>
+      <span class="print-summary__item print-summary__item--regular">${this.formatarNumero(totais.regulares)} regulares</span>
+      <span class="print-summary__item print-summary__item--blue">${this.formatarNumero(totais.inclusiva)} inclusivas</span>
+      <span class="print-summary__item print-summary__item--orange">${this.formatarNumero(totais.exclusiva)} exclusivas PCD</span>
+    </div>
+
+    <div class="print-grid">
+      <article class="print-card print-card--blue">
+        <div class="print-card__accent"></div>
+        <div class="print-card__body">
+          <h2 class="print-card__title">Mais pedidas</h2>
+          <p class="print-card__note">Cite 3-4 ao vivo</p>
+          <ol class="print-rank">${this.renderRank(ocupacoes)}</ol>
+        </div>
+      </article>
+      <article class="print-card print-card--green">
+        <div class="print-card__accent"></div>
+        <div class="print-card__body">
+          <h2 class="print-card__title">Frases de impacto</h2>
+          <ol class="print-rank print-rank--frase">
+            ${frases.map((frase) => `<li>${this.escapeHtml(frase)}</li>`).join("")}
+          </ol>
+        </div>
+      </article>
+      <article class="print-card print-card--orange">
+        <div class="print-card__accent"></div>
+        <div class="print-card__body">
+          <h2 class="print-card__title">Top municípios</h2>
+          <ol class="print-rank">${this.renderRank(municipios)}</ol>
+        </div>
+      </article>
+      <article class="print-card print-card--blue">
+        <div class="print-card__accent"></div>
+        <div class="print-card__body">
+          <h2 class="print-card__title">Top regiões</h2>
+          <ol class="print-rank">${this.renderRank(regioes)}</ol>
+        </div>
+      </article>
+    </div>
+
+    <div class="print-legend">
+      <div class="print-legend__item">
+        <span>Chamada final</span>
+        <span>Procure a unidade do Sine mais próxima com carteira de trabalho e currículo atualizado.</span>
+      </div>
+      <div class="print-legend__item">
+        <span>Portal</span>
+        <span>Ou acesse o Portal Emprega Brasil / MTb e o site <a href="https://vagas.idt.org.br/">vagas.idt.org.br</a>.</span>
+      </div>
+    </div>
+
+    <p class="print-more-info">
+      Para mais informações acesse: <a href="https://vagas.idt.org.br/">https://vagas.idt.org.br/</a>
+    </p>
+
+    <footer class="print-footer">
+      Documento gerado pelo portal de Vagas de Emprego do IDT — página formatada em A4.
+    </footer>
+  </div>
+</body>
+</html>`;
+  },
+
+  async imprimirRelatorio(link) {
+    const rotulo = link ? link.textContent : "";
+    if (link) {
+      link.setAttribute("aria-busy", "true");
+      link.textContent = "Gerando...";
+    }
+    try {
+      const res = await fetch("/api/vagas", { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const vagas = Array.isArray(data && data.vagas) ? data.vagas : [];
+      if (!vagas.length) {
+        alert("Não há vagas disponíveis para montar o relatório agora.");
+        return;
+      }
+      const logoSrc = await this.obterLogoSrc();
+      const html = this.montarRelatorioCartela({
+        vagas,
+        ultimaAtualizacao: data.ultima_atualizacao || "",
+        logoSrc,
+      });
+      this.abrirImpressao(html);
+    } catch (error) {
+      console.error(error);
+      alert("Não foi possível gerar o relatório. Tente novamente.");
+    } finally {
+      if (link) {
+        link.removeAttribute("aria-busy");
+        link.textContent = rotulo || "Relatório";
+      }
+    }
+  },
+
+  ligarMenuRelatorio() {
+    document.querySelectorAll("[data-relatorio]").forEach((link) => {
+      if (link.dataset.boundRelatorio === "1") return;
+      link.dataset.boundRelatorio = "1";
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.imprimirRelatorio(link);
+      });
+    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("relatorio") === "1") {
+      this.imprimirRelatorio(document.querySelector("[data-relatorio]"));
+    }
+  },
 };
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof SalvarVagas !== "undefined") {
+    SalvarVagas.ligarMenuRelatorio();
+  }
+});
