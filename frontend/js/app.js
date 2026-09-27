@@ -14,6 +14,7 @@ const state = {
     escolaridade: "",
     tipoContratacao: "",
     experiencia: "",
+    regional: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,
@@ -364,7 +365,7 @@ function aplicarFiltrosDaURL() {
 }
 
 function aplicarFiltros(opcoes = {}) {
-  const { cargo, unidade, municipio, escolaridade, tipoContratacao, experiencia, dataPeriodo } = state.filtros;
+  const { cargo, unidade, municipio, escolaridade, tipoContratacao, experiencia, regional, dataPeriodo } = state.filtros;
   const resetarPagina = opcoes.resetarPagina !== false;
 
   state.filtradas = state.vagas.filter((vaga) => {
@@ -374,6 +375,7 @@ function aplicarFiltros(opcoes = {}) {
     if (!passaFiltroLista(vaga, escolaridade, "escolaridade")) return false;
     if (!passaFiltroLista(vaga, tipoContratacao, "tipo_contratacao")) return false;
     if (!passaFiltroLista(vaga, experiencia, "experiencia")) return false;
+    if (regional && normalizar(vaga.regional || "") !== normalizar(regional)) return false;
     if (!dataDentroPeriodo(dataFiltro(vaga), dataPeriodo)) return false;
     if (!passaFiltroPcd(vaga)) return false;
     return true;
@@ -438,6 +440,7 @@ function atualizarStatus() {
     state.filtros.escolaridade ||
     state.filtros.tipoContratacao ||
     state.filtros.experiencia ||
+    state.filtros.regional ||
     state.filtros.inclusiva ||
     state.filtros.exclusiva;
 
@@ -508,6 +511,7 @@ function textoRankingVaga(vaga) {
 function textoRankingPorTipo(vaga, tipo) {
   if (tipo === "cidades") return municipioDaVaga(vaga);
   if (tipo === "unidades") return String(vaga.unidade || "").trim();
+  if (tipo === "regioes") return String(vaga.regional || "").trim();
   return textoRankingVaga(vaga);
 }
 
@@ -540,14 +544,20 @@ function obterRanking(tipo) {
 function valorPopularSelecionado(tipo) {
   if (tipo === "cidades") return els.municipio.value;
   if (tipo === "unidades") return els.unidade.value;
+  if (tipo === "regioes") return state.filtros.regional || "";
   return els.cargo.value.trim();
 }
 
 function atualizarTemaPopular() {
   const card = document.querySelector(".popular-card");
   if (!card) return;
-  card.classList.remove("popular-theme--vagas", "popular-theme--cidades", "popular-theme--unidades");
-  const tema = ["vagas", "cidades", "unidades"].includes(state.popularesTipo)
+  card.classList.remove(
+    "popular-theme--vagas",
+    "popular-theme--cidades",
+    "popular-theme--unidades",
+    "popular-theme--regioes"
+  );
+  const tema = ["vagas", "cidades", "unidades", "regioes"].includes(state.popularesTipo)
     ? state.popularesTipo
     : "vagas";
   card.classList.add(`popular-theme--${tema}`);
@@ -643,6 +653,8 @@ function aplicarBuscaPopular(valor) {
     els.municipio.value = valor;
   } else if (state.popularesTipo === "unidades") {
     els.unidade.value = valor;
+  } else if (state.popularesTipo === "regioes") {
+    state.filtros.regional = valor;
   } else {
     els.cargo.value = valor;
   }
@@ -856,6 +868,7 @@ function limparBusca() {
     escolaridade: "",
     tipoContratacao: "",
     experiencia: "",
+    regional: "",
     dataPeriodo: "mais-recente",
     inclusiva: false,
     exclusiva: false,

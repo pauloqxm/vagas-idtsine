@@ -370,6 +370,7 @@ def _row_para_vaga(row: List[str]) -> Optional[Dict[str, Any]]:
             "escolaridade": "",
             "experiencia": "",
             "municipio_trabalho": "",
+            "regional": "",
             "observacao": str(row[15] or "").strip() or None,
             "gestao": info.get("gestao", ""),
         }
@@ -448,6 +449,7 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "escolaridade": _limpar_texto_informado(item.get("escolaridade")),
         "experiencia": _limpar_texto_informado(item.get("experiencia")),
         "municipio_trabalho": _municipio_trabalho_api(item.get("municipioTrabalho")),
+        "regional": _limpar_texto_informado(item.get("regional")),
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),
         "edicao_postagem": _normalizar_edicao_postagem(item.get("edicaoPostagem")),
