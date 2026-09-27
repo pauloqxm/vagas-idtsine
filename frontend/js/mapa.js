@@ -6,6 +6,8 @@ const CE_ESTADO_BOUNDS = [
 const CE_REGIOES_SOURCE = "source-ce-regioes";
 const CE_REGIOES_FILL = "layer-ce-regioes-fill";
 const CE_REGIOES_LINE = "layer-ce-regioes-line";
+const CIRCULOS_SOURCE = "source-vagas-municipio";
+const CIRCULOS_LAYER = "layer-vagas-municipio";
 const UNIDADES_SOURCE = "source-unidades";
 const UNIDADES_LAYER = "layer-unidades";
 const PINO_UNIDADE_URL = "https://i.ibb.co/N6jfVtjN/pino-unidade.png";
@@ -40,6 +42,8 @@ let geolocateControl = null;
 let vagasGeojson = null;
 let unidadesGeojson = null;
 let dataMaisRecente = null;
+const centroidesMunicipio = new Map();
+let camadaCirculosVisivel = true;
 const filtros = {
   unidade: "",
   municipio: "",
@@ -73,6 +77,145 @@ function municipioDaFeature(props) {
     if (props && props[key]) return String(props[key]).trim();
   }
   return "";
+}
+
+function centroidAnel(ring) {
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < ring.length - 1; i += 1) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    const f = x1 * y2 - x2 * y1;
+    area += f;
+    cx += (x1 + x2) * f;
+    cy += (y1 + y2) * f;
+  }
+  area *= 0.5;
+  if (!area) {
+    return { coord: ring[0], area: 0 };
+  }
+  return { coord: [cx / (6 * area), cy / (6 * area)], area: Math.abs(area) };
+}
+
+function centroidGeometria(geom) {
+  if (!geom || !geom.coordinates) return null;
+  const poligonos =
+    geom.type === "Polygon"
+      ? [geom.coordinates]
+      : geom.type === "MultiPolygon"
+        ? geom.coordinates
+        : [];
+  let melhor = null;
+  for (const poly of poligonos) {
+    const ring = poly && poly[0];
+    if (!ring || ring.length < 3) continue;
+    const atual = centroidAnel(ring);
+    if (!melhor || atual.area > melhor.area) melhor = atual;
+  }
+  return melhor ? melhor.coord : null;
+}
+
+function indexarCentroidesMunicipio(geojson) {
+  centroidesMunicipio.clear();
+  (geojson && geojson.features ? geojson.features : []).forEach((feature) => {
+    const nome = municipioDaFeature(feature && feature.properties);
+    const coord = centroidGeometria(feature && feature.geometry);
+    if (!nome || !coord) return;
+    centroidesMunicipio.set(normalizar(nome), { nome, coord });
+  });
+}
+
+function totaisVagasPorMunicipio() {
+  const mapa = new Map();
+  vagasFiltradas().forEach((feature) => {
+    const nome = String((feature.properties || {}).municipio_trabalho || "").trim();
+    if (!nome) return;
+    const chave = normalizar(nome);
+    const atual = mapa.get(chave) || { nome, total: 0 };
+    atual.total += qtdeFeature(feature);
+    mapa.set(chave, atual);
+  });
+  return mapa;
+}
+
+function geojsonCirculosMunicipio() {
+  const features = [];
+  totaisVagasPorMunicipio().forEach((item, chave) => {
+    const centro = centroidesMunicipio.get(chave);
+    if (!centro || !item.total) return;
+    features.push({
+      type: "Feature",
+      properties: {
+        municipio: centro.nome,
+        qtde_vagas: item.total,
+      },
+      geometry: { type: "Point", coordinates: centro.coord },
+    });
+  });
+  return { type: "FeatureCollection", features };
+}
+
+function raioCirculoExpr(maxQtde) {
+  const maxSqrt = Math.sqrt(Math.max(Number(maxQtde) || 1, 1));
+  return [
+    "interpolate",
+    ["linear"],
+    ["sqrt", ["to-number", ["get", "qtde_vagas"], 0]],
+    0,
+    6,
+    maxSqrt,
+    42,
+  ];
+}
+
+function atualizarCirculosMunicipio() {
+  if (!map || !map.getSource(CIRCULOS_SOURCE)) return;
+  const data = geojsonCirculosMunicipio();
+  map.getSource(CIRCULOS_SOURCE).setData(data);
+  const maxQtde = data.features.reduce(
+    (maior, feature) => Math.max(maior, Number(feature.properties.qtde_vagas) || 0),
+    0
+  );
+  if (map.getLayer(CIRCULOS_LAYER)) {
+    map.setPaintProperty(CIRCULOS_LAYER, "circle-radius", raioCirculoExpr(maxQtde));
+    map.setLayoutProperty(
+      CIRCULOS_LAYER,
+      "visibility",
+      camadaCirculosVisivel ? "visible" : "none"
+    );
+  }
+}
+
+function adicionarCirculosMunicipio() {
+  map.addSource(CIRCULOS_SOURCE, {
+    type: "geojson",
+    data: geojsonCirculosMunicipio(),
+  });
+  map.addLayer({
+    id: CIRCULOS_LAYER,
+    type: "circle",
+    source: CIRCULOS_SOURCE,
+    layout: {
+      visibility: camadaCirculosVisivel ? "visible" : "none",
+      "circle-sort-key": ["to-number", ["get", "qtde_vagas"], 0],
+    },
+    paint: {
+      "circle-radius": raioCirculoExpr(1),
+      "circle-color": "#00578c",
+      "circle-opacity": 0.38,
+      "circle-stroke-color": "#003d68",
+      "circle-stroke-width": 1.4,
+      "circle-stroke-opacity": 0.9,
+    },
+  });
+
+  map.on("click", CIRCULOS_LAYER, (event) => {
+    event.originalEvent.__cliqueCirculo = true;
+    const feature = event.features && event.features[0];
+    const municipio = String((feature && feature.properties && feature.properties.municipio) || "").trim();
+    if (municipio) selecionarMunicipio(municipio);
+  });
 }
 
 function codigoPosto(props) {
@@ -504,6 +647,7 @@ function renderPaginacaoTabela(totalPaginas) {
 function aplicarFiltrosMapa() {
   tabelaPagina = 1;
   aplicarFiltroUnidadesNoMapa();
+  atualizarCirculosMunicipio();
   atualizarResumo();
   renderTabelaVagas();
 }
@@ -542,6 +686,7 @@ function limparSelecaoMapa() {
 }
 
 function adicionarRegioes(geojson, paleta) {
+  indexarCentroidesMunicipio(geojson);
   map.addSource(CE_REGIOES_SOURCE, {
     type: "geojson",
     data: geojson,
@@ -569,6 +714,7 @@ function adicionarRegioes(geojson, paleta) {
   });
 
   map.on("click", CE_REGIOES_FILL, (event) => {
+    if (event.originalEvent && event.originalEvent.__cliqueCirculo) return;
     const feature = event.features && event.features[0];
     const municipio = municipioDaFeature(feature && feature.properties);
     if (municipio) selecionarMunicipio(municipio);
@@ -692,7 +838,7 @@ function atualizarUltimaAtualizacao(valor) {
 }
 
 function configurarCursor() {
-  [UNIDADES_LAYER].forEach((layer) => {
+  [UNIDADES_LAYER, CIRCULOS_LAYER].forEach((layer) => {
     map.on("mouseenter", layer, () => {
       map.getCanvas().style.cursor = "pointer";
     });
@@ -705,7 +851,7 @@ function configurarCursor() {
 function configurarLimpezaCliqueFora() {
   map.on("click", (event) => {
     const features = map.queryRenderedFeatures(event.point, {
-      layers: [UNIDADES_LAYER, CE_REGIOES_FILL],
+      layers: [UNIDADES_LAYER, CE_REGIOES_FILL, CIRCULOS_LAYER],
     });
     if (features.length === 0) {
       limparSelecaoMapa();
@@ -769,6 +915,26 @@ function configurarFiltros() {
       fitCeara();
     });
   }
+
+  configurarLegendaCirculos();
+}
+
+function configurarLegendaCirculos() {
+  const btn = document.getElementById("legend-toggle-circulos");
+  if (!btn || btn.dataset.bound === "1") return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", () => {
+    camadaCirculosVisivel = !camadaCirculosVisivel;
+    btn.classList.toggle("is-off", !camadaCirculosVisivel);
+    btn.setAttribute("aria-pressed", camadaCirculosVisivel ? "true" : "false");
+    if (map && map.getLayer(CIRCULOS_LAYER)) {
+      map.setLayoutProperty(
+        CIRCULOS_LAYER,
+        "visibility",
+        camadaCirculosVisivel ? "visible" : "none"
+      );
+    }
+  });
 }
 
 function dadosAgendamentoDeProps(props) {
@@ -1107,6 +1273,7 @@ async function initMapa() {
       imagemUnidadePromise,
     ]);
     adicionarRegioes(geojson, paleta);
+    adicionarCirculosMunicipio();
     await adicionarUnidades(unidades, imagemUnidade);
     adicionarVagas(vagas);
     popularFiltros();

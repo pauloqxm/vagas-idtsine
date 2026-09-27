@@ -1838,15 +1838,38 @@ h1 {
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
-.map-legend span {
+.map-legend span,
+.map-legend__item {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
 }
 
+.map-legend__name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-underline-offset: 0.18em;
+}
+
+.map-legend__name:hover,
+.map-legend__name:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.map-legend__name.is-off {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 .legend-dot,
 .legend-pin,
 .legend-area,
+.legend-circle,
 .legend-user {
   display: inline-block;
   width: 14px;
@@ -1870,6 +1893,13 @@ h1 {
 .legend-area {
   border: 2px solid var(--idt-green-hover);
   background: var(--idt-green-soft);
+}
+
+.legend-circle {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #003d68;
+  background: rgba(0, 87, 140, 0.38);
 }
 
 .legend-user {
