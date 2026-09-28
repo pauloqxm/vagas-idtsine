@@ -1835,7 +1835,7 @@ const SalvarVagas = {
       .join("");
   },
 
-  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta }) {
+  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta, analises: analisesEntrada }) {
     const totais = this.totaisPcd(vagas);
     const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
     const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
@@ -1855,15 +1855,17 @@ const SalvarVagas = {
         .map((vaga) => String(vaga.posto_atendimento || vaga.unidade || "").trim())
         .filter(Boolean)
     ).size;
-    const analises = this.textosAnalise({
-      total: totais.total,
-      inclusiva: totais.inclusiva,
-      exclusiva: totais.exclusiva,
-      regulares: totais.regulares,
-      municipios: qtdeMunicipios,
-      regioes,
-      ocupacoes,
-    });
+    const analises = Array.isArray(analisesEntrada) && analisesEntrada.length
+      ? analisesEntrada
+      : this.textosAnalise({
+          total: totais.total,
+          inclusiva: totais.inclusiva,
+          exclusiva: totais.exclusiva,
+          regulares: totais.regulares,
+          municipios: qtdeMunicipios,
+          regioes,
+          ocupacoes,
+        });
     const dataFonte =
       this.dataExibicao(ultimaAtualizacao) ||
       this.dataExibicao((vagas[0] || {}).data_disponibilidade) ||
@@ -1970,6 +1972,64 @@ const SalvarVagas = {
 </html>`;
   },
 
+  montarResumoRelatorio(vagas, ultimaAtualizacao) {
+    const totais = this.totaisPcd(vagas);
+    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
+    const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
+    const regioes = this.rankingPor(vagas, (vaga) => vaga.regional, 5);
+    return {
+      total: totais.total,
+      regulares: totais.regulares,
+      inclusiva: totais.inclusiva,
+      exclusiva: totais.exclusiva,
+      ocupacoes: this.totalOcupacoesUnicas(vagas),
+      municipios: new Set(
+        (vagas || []).map((vaga) => String(vaga.municipio_trabalho || "").trim()).filter(Boolean)
+      ).size,
+      regioes_qtde: new Set(
+        (vagas || []).map((vaga) => String(vaga.regional || "").trim()).filter(Boolean)
+      ).size,
+      unidades: new Set(
+        (vagas || [])
+          .map((vaga) => String(vaga.posto_atendimento || vaga.unidade || "").trim())
+          .filter(Boolean)
+      ).size,
+      data_fonte:
+        this.dataExibicao(ultimaAtualizacao) ||
+        this.dataExibicao((vagas[0] || {}).data_disponibilidade) ||
+        this.dataHojeBR(),
+      regioes,
+      municipios_top: municipios,
+      ocupacoes_top: ocupacoes,
+    };
+  },
+
+  async buscarAnalises(resumo) {
+    try {
+      const res = await fetch("/api/relatorio/analise", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(resumo),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      if (Array.isArray(data && data.textos) && data.textos.length) {
+        return data.textos.map((item) => String(item || "").trim()).filter(Boolean);
+      }
+    } catch (error) {
+      console.warn("Análise do relatório usou o texto padrão.", error);
+    }
+    return this.textosAnalise({
+      total: resumo.total,
+      inclusiva: resumo.inclusiva,
+      exclusiva: resumo.exclusiva,
+      regulares: resumo.regulares,
+      municipios: resumo.municipios,
+      regioes: resumo.regioes,
+      ocupacoes: resumo.ocupacoes_top,
+    });
+  },
+
   async imprimirRelatorio(link) {
     const rotulo = link ? link.textContent : "";
     if (link) {
@@ -1990,12 +2050,15 @@ const SalvarVagas = {
         alert("Não há vagas disponíveis para montar o relatório agora.");
         return;
       }
+      const resumo = this.montarResumoRelatorio(vagas, data.ultima_atualizacao || "");
+      const analises = await this.buscarAnalises(resumo);
       const html = this.montarRelatorioCartela({
         vagas,
         ultimaAtualizacao: data.ultima_atualizacao || "",
         logoSrc,
         geojson,
         paleta,
+        analises,
       });
       this.abrirImpressao(html);
     } catch (error) {

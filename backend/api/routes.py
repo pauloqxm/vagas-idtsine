@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse
 
-from backend.services import oferta_service, regioes_service, unidades_service, vagas_service
+from backend.services import analise_service, oferta_service, regioes_service, unidades_service, vagas_service
 
 router = APIRouter(prefix="/api")
 
@@ -78,6 +78,14 @@ def criar_oferta_vaga(body: dict = Body(...)):
             detail="Não foi possível enviar a solicitação. Tente novamente.",
         ) from exc
     return JSONResponse(status_code=status if 200 <= status < 600 else 502, content=resposta)
+
+
+@router.post("/relatorio/analise")
+def analisar_relatorio(body: dict = Body(default={})):
+    return JSONResponse(
+        content=analise_service.analisar_resumo(body or {}),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/vagas/refresh")
