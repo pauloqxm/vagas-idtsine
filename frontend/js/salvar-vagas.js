@@ -359,6 +359,24 @@ const SalvarVagas = {
         margin-bottom: 12px;
       }
 
+      .print-summary--gestao {
+        display: grid;
+        gap: 8px;
+      }
+
+      .print-summary__row {
+        display: grid;
+        gap: 8px;
+      }
+
+      .print-summary__row--4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .print-summary__row--3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .print-summary__item {
         padding: 6px 10px;
         border-radius: 999px;
@@ -366,6 +384,14 @@ const SalvarVagas = {
         color: #003d68;
         font-size: 11px;
         font-weight: 800;
+      }
+
+      .print-summary--gestao .print-summary__item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        text-align: center;
       }
 
       .print-summary__item--green {
@@ -1614,13 +1640,50 @@ const SalvarVagas = {
     return textos;
   },
 
-  simplificarAnel(ring, alvo = 28) {
-    if (!Array.isArray(ring) || ring.length <= alvo + 1) return ring || [];
-    const passo = Math.ceil(ring.length / alvo);
-    const out = [];
-    for (let i = 0; i < ring.length - 1; i += passo) out.push(ring[i]);
-    out.push(ring[ring.length - 1]);
-    return out;
+  distanciaPontoReta(ponto, a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len2 = dx * dx + dy * dy;
+    if (!len2) return Math.hypot(ponto[0] - a[0], ponto[1] - a[1]);
+    const t = Math.max(0, Math.min(1, ((ponto[0] - a[0]) * dx + (ponto[1] - a[1]) * dy) / len2));
+    return Math.hypot(ponto[0] - (a[0] + t * dx), ponto[1] - (a[1] + t * dy));
+  },
+
+  simplificarAnel(ring, tolerancia = 0.0012) {
+    if (!Array.isArray(ring) || ring.length < 4) return ring || [];
+    const pontos = ring.slice();
+    if (
+      pontos.length > 1 &&
+      pontos[0][0] === pontos[pontos.length - 1][0] &&
+      pontos[0][1] === pontos[pontos.length - 1][1]
+    ) {
+      pontos.pop();
+    }
+    const reduzir = (pts) => {
+      if (pts.length <= 2) return pts;
+      let maxD = -1;
+      let idx = 0;
+      const inicio = pts[0];
+      const fim = pts[pts.length - 1];
+      for (let i = 1; i < pts.length - 1; i += 1) {
+        const dist = this.distanciaPontoReta(pts[i], inicio, fim);
+        if (dist > maxD) {
+          maxD = dist;
+          idx = i;
+        }
+      }
+      if (maxD > tolerancia) {
+        const esquerda = reduzir(pts.slice(0, idx + 1));
+        const direita = reduzir(pts.slice(idx));
+        return esquerda.slice(0, -1).concat(direita);
+      }
+      return [inicio, fim];
+    };
+    const simples = reduzir(pontos);
+    if (simples.length && (simples[0][0] !== simples[simples.length - 1][0] || simples[0][1] !== simples[simples.length - 1][1])) {
+      simples.push(simples[0]);
+    }
+    return simples.length >= 4 ? simples : ring;
   },
 
   boundsGeojson(features) {
@@ -1651,8 +1714,13 @@ const SalvarVagas = {
   projetarPonto(lng, lat, bounds, width, height, pad) {
     const dx = bounds.maxX - bounds.minX || 1;
     const dy = bounds.maxY - bounds.minY || 1;
-    const x = pad + ((lng - bounds.minX) / dx) * (width - pad * 2);
-    const y = pad + (1 - (lat - bounds.minY) / dy) * (height - pad * 2);
+    const escala = Math.min((width - pad * 2) / dx, (height - pad * 2) / dy);
+    const usadoW = dx * escala;
+    const usadoH = dy * escala;
+    const ox = (width - usadoW) / 2;
+    const oy = (height - usadoH) / 2;
+    const x = ox + (lng - bounds.minX) * escala;
+    const y = oy + (bounds.maxY - lat) * escala;
     return [x, y];
   },
 
@@ -1706,8 +1774,8 @@ const SalvarVagas = {
   montarSvgMapa(geojson, paleta, totaisMunicipio) {
     const features = (geojson && geojson.features) || [];
     const width = 360;
-    const height = 320;
-    const pad = 8;
+    const height = 400;
+    const pad = 10;
     const bounds = this.boundsGeojson(features);
     const cores = (paleta && paleta.cores) || {};
     const proj = (lng, lat) => this.projetarPonto(lng, lat, bounds, width, height, pad);
@@ -1728,7 +1796,7 @@ const SalvarVagas = {
                   .map(([lng, lat]) => proj(lng, lat));
                 if (pts.length < 3) return "";
                 return (
-                  pts.map((pt, i) => `${i ? "L" : "M"}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join("") + "Z"
+                  pts.map((pt, i) => `${i ? "L" : "M"}${pt[0].toFixed(2)},${pt[1].toFixed(2)}`).join("") + "Z"
                 );
               })
               .join("")
@@ -1736,7 +1804,7 @@ const SalvarVagas = {
           .join("");
         if (!d) return "";
         const cor = cores[this.regiaoProps(feature.properties)] || "#dff5ea";
-        return `<path d="${d}" fill="${cor}" fill-opacity="0.55" stroke="#008f4b" stroke-width="0.6" stroke-opacity="0.75"/>`;
+        return `<path d="${d}" fill="${cor}" fill-opacity="0.55" fill-rule="evenodd" stroke="#008f4b" stroke-width="0.45" stroke-opacity="0.85"/>`;
       })
       .join("");
 
@@ -1747,8 +1815,8 @@ const SalvarVagas = {
         const centro = this.centroidGeometria(feature && feature.geometry);
         if (!item || !centro) return "";
         const [x, y] = proj(centro[0], centro[1]);
-        const r = 2.4 + 10 * Math.sqrt(item.total / maxQtde);
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="#00578c" fill-opacity="0.38" stroke="#003d68" stroke-width="0.7"/>`;
+        const r = 2.2 + 9 * Math.sqrt(item.total / maxQtde);
+        return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="#00578c" fill-opacity="0.38" stroke="#003d68" stroke-width="0.7"/>`;
       })
       .join("");
 
@@ -1844,14 +1912,18 @@ const SalvarVagas = {
       <span>Vagas de emprego abertas agora no Ceará</span>
     </div>
 
-    <div class="print-summary">
-      <span class="print-summary__item">${this.formatarNumero(this.totalOcupacoesUnicas(vagas))} ocupações</span>
-      <span class="print-summary__item">${this.formatarNumero(qtdeMunicipios)} municípios</span>
-      <span class="print-summary__item">${this.formatarNumero(qtdeRegioes)} regiões</span>
-      <span class="print-summary__item">${this.formatarNumero(qtdeUnidades)} unidades Sine</span>
-      <span class="print-summary__item print-summary__item--regular">${this.formatarNumero(totais.regulares)} regulares</span>
-      <span class="print-summary__item print-summary__item--blue">${this.formatarNumero(totais.inclusiva)} inclusivas</span>
-      <span class="print-summary__item print-summary__item--orange">${this.formatarNumero(totais.exclusiva)} exclusivas PCD</span>
+    <div class="print-summary print-summary--gestao">
+      <div class="print-summary__row print-summary__row--4">
+        <span class="print-summary__item">${this.formatarNumero(this.totalOcupacoesUnicas(vagas))} ocupações</span>
+        <span class="print-summary__item">${this.formatarNumero(qtdeMunicipios)} municípios</span>
+        <span class="print-summary__item">${this.formatarNumero(qtdeRegioes)} regiões</span>
+        <span class="print-summary__item">${this.formatarNumero(qtdeUnidades)} unidades Sine</span>
+      </div>
+      <div class="print-summary__row print-summary__row--3">
+        <span class="print-summary__item print-summary__item--regular">${this.formatarNumero(totais.regulares)} regulares</span>
+        <span class="print-summary__item print-summary__item--blue">${this.formatarNumero(totais.inclusiva)} inclusivas</span>
+        <span class="print-summary__item print-summary__item--orange">${this.formatarNumero(totais.exclusiva)} exclusivas PCD</span>
+      </div>
     </div>
 
     <div class="print-board">
