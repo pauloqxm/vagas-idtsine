@@ -2054,10 +2054,8 @@ const SalvarVagas = {
   },
 
   async imprimirRelatorio(link) {
-    const rotulo = link ? link.textContent : "";
     if (link) {
       link.setAttribute("aria-busy", "true");
-      link.textContent = "Gerando...";
     }
     try {
       const [resVagas, geojson, paleta, logoSrc] = await Promise.all([
@@ -2087,7 +2085,6 @@ const SalvarVagas = {
     } finally {
       if (link) {
         link.removeAttribute("aria-busy");
-        link.textContent = rotulo || "Relatório";
       }
     }
   },
