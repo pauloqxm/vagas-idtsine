@@ -742,23 +742,21 @@ const SalvarVagas = {
       }
 
       .print-rank li {
-        display: flex;
+        display: grid;
+        grid-template-columns: 2em minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
         color: #334155;
         font-size: 12px;
         font-weight: 700;
       }
 
       .print-rank__n {
-        flex: 0 0 1.15em;
         color: #003d68;
         font-variant-numeric: tabular-nums;
       }
 
       .print-rank__txt {
-        flex: 1;
         min-width: 0;
         white-space: nowrap;
         overflow: hidden;
@@ -766,7 +764,6 @@ const SalvarVagas = {
       }
 
       .print-rank b {
-        flex: 0 0 auto;
         color: #003d68;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
@@ -1916,7 +1913,7 @@ const SalvarVagas = {
     return itens
       .map(
         (item, i) =>
-          `<li><span class="print-rank__n">${i + 1}</span><span class="print-rank__txt" title="${this.escapeHtml(item.texto)}">${this.escapeHtml(item.texto)}</span><b>${this.formatarNumero(item.total)}</b></li>`
+          `<li><span class="print-rank__n">${i + 1}º</span><span class="print-rank__txt" title="${this.escapeHtml(item.texto)}">${this.escapeHtml(item.texto)}</span><b>${this.formatarNumero(item.total)}</b></li>`
       )
       .join("");
   },
