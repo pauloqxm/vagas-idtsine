@@ -241,15 +241,11 @@ const SalvarVagas = {
   },
 
   estilos(formato) {
+    const gestao = formato === "gestao";
     return `
       @page {
         size: A4 portrait;
-        margin: 12mm 10mm;
-      }
-
-      @page gestao {
-        size: A4 portrait;
-        margin: 10mm 10mm;
+        margin: ${gestao ? "10mm 10mm" : "12mm 10mm"};
       }
 
       * { box-sizing: border-box; }
@@ -858,10 +854,6 @@ const SalvarVagas = {
         margin-top: 4px;
       }
 
-      .print-page--gestao {
-        page: gestao;
-      }
-
       .print-page--gestao .print-header {
         margin-bottom: 10px;
       }
@@ -880,15 +872,32 @@ const SalvarVagas = {
         margin-bottom: 8px;
       }
 
+      .print-page--gestao .print-map__frame {
+        height: 98mm;
+        overflow: hidden;
+      }
+
       .print-page--gestao .print-map svg {
+        display: block;
         width: 100%;
-        height: auto;
-        max-height: 102mm;
+        height: 100%;
       }
 
       @media print {
-        body { background: #fff; }
+        html, body {
+          width: auto;
+          height: auto !important;
+          margin: 0;
+          overflow: hidden;
+          background: #fff;
+        }
         .print-card { box-shadow: none; }
+        .print-page--gestao {
+          max-height: 277mm;
+          overflow: hidden;
+          page-break-after: avoid;
+          break-after: avoid;
+        }
       }
     `;
   },
@@ -1872,7 +1881,7 @@ const SalvarVagas = {
       })
       .join("");
 
-    return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa de vagas por município no Ceará">${polys}${circulos}</svg>`;
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa de vagas por município no Ceará">${polys}${circulos}</svg>`;
   },
 
   renderRank(itens) {
@@ -1938,7 +1947,7 @@ const SalvarVagas = {
 <head>
   <meta charset="UTF-8" />
   <title>Relatório gerencial de vagas - ${this.escapeHtml(dataFonte)}</title>
-  <style>${this.estilos("cards")}</style>
+  <style>${this.estilos("gestao")}</style>
 </head>
 <body>
   <div class="print-page print-page--gestao">
@@ -1981,7 +1990,7 @@ const SalvarVagas = {
     <div class="print-board">
       <section class="print-map">
         <h2 class="print-map__title">Mapa de vagas por município</h2>
-        ${mapaSvg}
+        <div class="print-map__frame">${mapaSvg}</div>
       </section>
       <div class="print-board__side">
         ${card("blue", "Ocupações mais demandadas", `<ol class="print-rank">${this.renderRank(ocupacoes)}</ol>`)}
