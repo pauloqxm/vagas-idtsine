@@ -750,6 +750,64 @@ const SalvarVagas = {
         font-weight: 700;
       }
 
+      .print-board {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .print-map {
+        padding: 8px 10px 10px;
+        border: 1px solid #d5e3ef;
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .print-map__title {
+        margin: 0 0 6px;
+        color: #003d68;
+        font-size: 14px;
+      }
+
+      .print-map svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .print-board__side {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .print-analise {
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border: 1px solid #d7e5f0;
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .print-analise h2 {
+        margin: 0 0 8px;
+        color: #003d68;
+        font-size: 14px;
+      }
+
+      .print-analise ul {
+        margin: 0;
+        padding-left: 1.1rem;
+        color: #2f3a4e;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .print-analise li + li {
+        margin-top: 4px;
+      }
+
       @media print {
         body { background: #fff; }
         .print-card { box-shadow: none; }
@@ -1523,21 +1581,178 @@ const SalvarVagas = {
       .slice(0, limite);
   },
 
-  frasesImpacto({ total, inclusiva, municipios, regioes }) {
-    const frases = [];
-    if (total > 0 && inclusiva > 0) {
-      const decimo = Math.max(1, Math.round((inclusiva / total) * 10));
-      frases.push(`Quase ${decimo} em cada 10 vagas do Ceará são inclusivas.`);
+  percentual(parte, total) {
+    if (!total) return "0%";
+    return `${Math.round((Number(parte) / Number(total)) * 100)}%`;
+  },
+
+  textosAnalise({ total, inclusiva, exclusiva, regulares, municipios, regioes, ocupacoes }) {
+    const textos = [];
+    if (total > 0) {
+      textos.push(
+        `O extrato vigente registra ${this.formatarNumero(total)} vagas, das quais ${this.percentual(regulares, total)} são regulares, ${this.percentual(inclusiva, total)} inclusivas e ${this.percentual(exclusiva, total)} exclusivas PCD.`
+      );
     }
-    if (regioes.length >= 2) {
-      frases.push(`O ${regioes[1].texto} já é o 2º maior polo de vagas do estado.`);
-    } else if (regioes[0]) {
-      frases.push(`O ${regioes[0].texto} concentra a maior parte das vagas do estado.`);
+    if (regioes[0] && total > 0) {
+      textos.push(
+        `${regioes[0].texto} lidera a oferta, com ${this.formatarNumero(regioes[0].total)} vagas (${this.percentual(regioes[0].total, total)} do estado).`
+      );
+    }
+    if (regioes[1] && total > 0) {
+      textos.push(
+        `${regioes[1].texto} aparece em segundo, com ${this.formatarNumero(regioes[1].total)} vagas (${this.percentual(regioes[1].total, total)}).`
+      );
     }
     if (municipios > 0) {
-      frases.push(`São ${municipios} municípios com oportunidade aberta.`);
+      textos.push(`A oferta está distribuída em ${this.formatarNumero(municipios)} municípios com vaga aberta.`);
     }
-    return frases;
+    if (ocupacoes[0] && total > 0) {
+      textos.push(
+        `A ocupação com maior demanda é ${ocupacoes[0].texto}, com ${this.formatarNumero(ocupacoes[0].total)} vagas.`
+      );
+    }
+    return textos;
+  },
+
+  simplificarAnel(ring, alvo = 28) {
+    if (!Array.isArray(ring) || ring.length <= alvo + 1) return ring || [];
+    const passo = Math.ceil(ring.length / alvo);
+    const out = [];
+    for (let i = 0; i < ring.length - 1; i += passo) out.push(ring[i]);
+    out.push(ring[ring.length - 1]);
+    return out;
+  },
+
+  boundsGeojson(features) {
+    let minX = 180;
+    let minY = 90;
+    let maxX = -180;
+    let maxY = -90;
+    const visitar = (coords) => {
+      if (!Array.isArray(coords) || !coords.length) return;
+      if (typeof coords[0] === "number") {
+        const [x, y] = coords;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        return;
+      }
+      coords.forEach(visitar);
+    };
+    (features || []).forEach((feature) => visitar(feature && feature.geometry && feature.geometry.coordinates));
+    if (minX >= maxX || minY >= maxY) {
+      return { minX: -41.75, minY: -8.12, maxX: -36.88, maxY: -2.68 };
+    }
+    return { minX, minY, maxX, maxY };
+  },
+
+  projetarPonto(lng, lat, bounds, width, height, pad) {
+    const dx = bounds.maxX - bounds.minX || 1;
+    const dy = bounds.maxY - bounds.minY || 1;
+    const x = pad + ((lng - bounds.minX) / dx) * (width - pad * 2);
+    const y = pad + (1 - (lat - bounds.minY) / dy) * (height - pad * 2);
+    return [x, y];
+  },
+
+  centroidAnel(ring) {
+    let area = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < ring.length - 1; i += 1) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[i + 1];
+      const f = x1 * y2 - x2 * y1;
+      area += f;
+      cx += (x1 + x2) * f;
+      cy += (y1 + y2) * f;
+    }
+    area *= 0.5;
+    if (!area) return { coord: ring[0], area: 0 };
+    return { coord: [cx / (6 * area), cy / (6 * area)], area: Math.abs(area) };
+  },
+
+  centroidGeometria(geom) {
+    if (!geom || !geom.coordinates) return null;
+    const poligonos =
+      geom.type === "Polygon" ? [geom.coordinates] : geom.type === "MultiPolygon" ? geom.coordinates : [];
+    let melhor = null;
+    for (const poly of poligonos) {
+      const ring = poly && poly[0];
+      if (!ring || ring.length < 3) continue;
+      const atual = this.centroidAnel(ring);
+      if (!melhor || atual.area > melhor.area) melhor = atual;
+    }
+    return melhor ? melhor.coord : null;
+  },
+
+  municipioProps(props) {
+    const keys = ["Municipio", "MUNICIPIO", "municipio", "NM_MUN", "NOME"];
+    for (const key of keys) {
+      if (props && props[key]) return String(props[key]).trim();
+    }
+    return "";
+  },
+
+  regiaoProps(props) {
+    const keys = ["Região", "Regiao", "REGIÃO", "regiao", "REGIAO", "regional"];
+    for (const key of keys) {
+      if (props && props[key]) return String(props[key]).trim();
+    }
+    return "";
+  },
+
+  montarSvgMapa(geojson, paleta, totaisMunicipio) {
+    const features = (geojson && geojson.features) || [];
+    const width = 360;
+    const height = 320;
+    const pad = 8;
+    const bounds = this.boundsGeojson(features);
+    const cores = (paleta && paleta.cores) || {};
+    const proj = (lng, lat) => this.projetarPonto(lng, lat, bounds, width, height, pad);
+    const maxQtde = Math.max(1, ...[...totaisMunicipio.values()].map((item) => item.total));
+
+    const polys = features
+      .map((feature) => {
+        const geom = feature && feature.geometry;
+        if (!geom) return "";
+        const poligonos =
+          geom.type === "Polygon" ? [geom.coordinates] : geom.type === "MultiPolygon" ? geom.coordinates : [];
+        const d = poligonos
+          .map((poly) =>
+            (poly || [])
+              .map((ring) => {
+                const pts = this.simplificarAnel(ring)
+                  .filter((pt) => Array.isArray(pt) && pt.length >= 2)
+                  .map(([lng, lat]) => proj(lng, lat));
+                if (pts.length < 3) return "";
+                return (
+                  pts.map((pt, i) => `${i ? "L" : "M"}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join("") + "Z"
+                );
+              })
+              .join("")
+          )
+          .join("");
+        if (!d) return "";
+        const cor = cores[this.regiaoProps(feature.properties)] || "#dff5ea";
+        return `<path d="${d}" fill="${cor}" fill-opacity="0.55" stroke="#008f4b" stroke-width="0.6" stroke-opacity="0.75"/>`;
+      })
+      .join("");
+
+    const circulos = features
+      .map((feature) => {
+        const nome = this.municipioProps(feature && feature.properties);
+        const item = totaisMunicipio.get(this.normalizar(nome));
+        const centro = this.centroidGeometria(feature && feature.geometry);
+        if (!item || !centro) return "";
+        const [x, y] = proj(centro[0], centro[1]);
+        const r = 2.4 + 10 * Math.sqrt(item.total / maxQtde);
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="#00578c" fill-opacity="0.38" stroke="#003d68" stroke-width="0.7"/>`;
+      })
+      .join("");
+
+    return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mapa de vagas por município no Ceará">${polys}${circulos}</svg>`;
   },
 
   renderRank(itens) {
@@ -1552,11 +1767,15 @@ const SalvarVagas = {
       .join("");
   },
 
-  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc }) {
+  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta }) {
     const totais = this.totaisPcd(vagas);
-    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 4);
+    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
     const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
     const regioes = this.rankingPor(vagas, (vaga) => vaga.regional, 5);
+    const totaisMunicipio = new Map();
+    this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho).forEach((item) => {
+      totaisMunicipio.set(this.normalizar(item.texto), item);
+    });
     const qtdeMunicipios = new Set(
       (vagas || []).map((vaga) => String(vaga.municipio_trabalho || "").trim()).filter(Boolean)
     ).size;
@@ -1568,11 +1787,14 @@ const SalvarVagas = {
         .map((vaga) => String(vaga.posto_atendimento || vaga.unidade || "").trim())
         .filter(Boolean)
     ).size;
-    const frases = this.frasesImpacto({
+    const analises = this.textosAnalise({
       total: totais.total,
       inclusiva: totais.inclusiva,
+      exclusiva: totais.exclusiva,
+      regulares: totais.regulares,
       municipios: qtdeMunicipios,
       regioes,
+      ocupacoes,
     });
     const dataFonte =
       this.dataExibicao(ultimaAtualizacao) ||
@@ -1580,12 +1802,22 @@ const SalvarVagas = {
       this.dataHojeBR();
     const geradoEm = this.dataHoraHojeBR();
     const logo = logoSrc || "https://www.idt.org.br/assets/img/logos/logo_grande.png";
+    const mapaSvg = this.montarSvgMapa(geojson, paleta, totaisMunicipio);
+
+    const card = (tom, titulo, corpo) => `
+      <article class="print-card print-card--${tom}">
+        <div class="print-card__accent"></div>
+        <div class="print-card__body">
+          <h2 class="print-card__title">${this.escapeHtml(titulo)}</h2>
+          ${corpo}
+        </div>
+      </article>`;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Relatório visual de vagas - ${this.escapeHtml(dataFonte)}</title>
+  <title>Relatório gerencial de vagas - ${this.escapeHtml(dataFonte)}</title>
   <style>${this.estilos("cards")}</style>
 </head>
 <body>
@@ -1595,8 +1827,8 @@ const SalvarVagas = {
         <div class="print-header__brand">
           <img class="print-logo" src="${this.escapeHtml(logo)}" alt="IDT — Instituto de Desenvolvimento do Trabalho" />
           <h1 class="print-header__title">
-            Vagas de Emprego no Ceará
-            <span>Cartela rápida para entrevista</span>
+            Relatório gerencial de vagas
+            <span>Documento para alta gestão</span>
           </h1>
         </div>
         <div class="print-header__meta">
@@ -1622,57 +1854,44 @@ const SalvarVagas = {
       <span class="print-summary__item print-summary__item--orange">${this.formatarNumero(totais.exclusiva)} exclusivas PCD</span>
     </div>
 
-    <div class="print-grid">
-      <article class="print-card print-card--blue">
-        <div class="print-card__accent"></div>
-        <div class="print-card__body">
-          <h2 class="print-card__title">Mais pedidas</h2>
-          <p class="print-card__note">Cite 3-4 ao vivo</p>
-          <ol class="print-rank">${this.renderRank(ocupacoes)}</ol>
-        </div>
-      </article>
-      <article class="print-card print-card--green">
-        <div class="print-card__accent"></div>
-        <div class="print-card__body">
-          <h2 class="print-card__title">Frases de impacto</h2>
-          <ol class="print-rank print-rank--frase">
-            ${frases.map((frase) => `<li>${this.escapeHtml(frase)}</li>`).join("")}
-          </ol>
-        </div>
-      </article>
-      <article class="print-card print-card--orange">
-        <div class="print-card__accent"></div>
-        <div class="print-card__body">
-          <h2 class="print-card__title">Top municípios</h2>
-          <ol class="print-rank">${this.renderRank(municipios)}</ol>
-        </div>
-      </article>
-      <article class="print-card print-card--blue">
-        <div class="print-card__accent"></div>
-        <div class="print-card__body">
-          <h2 class="print-card__title">Top regiões</h2>
-          <ol class="print-rank">${this.renderRank(regioes)}</ol>
-        </div>
-      </article>
+    <div class="print-board">
+      <section class="print-map">
+        <h2 class="print-map__title">Mapa de vagas por município</h2>
+        ${mapaSvg}
+      </section>
+      <div class="print-board__side">
+        ${card("blue", "Ocupações mais demandadas", `<ol class="print-rank">${this.renderRank(ocupacoes)}</ol>`)}
+        ${card("orange", "Top municípios", `<ol class="print-rank">${this.renderRank(municipios)}</ol>`)}
+      </div>
     </div>
 
-    <div class="print-legend">
-      <div class="print-legend__item">
-        <span>Chamada final</span>
-        <span>Procure a unidade do Sine mais próxima com carteira de trabalho e currículo atualizado.</span>
-      </div>
-      <div class="print-legend__item">
-        <span>Portal</span>
-        <span>Ou acesse o Portal Emprega Brasil / MTb e o site <a href="https://vagas.idt.org.br/">vagas.idt.org.br</a>.</span>
-      </div>
+    <div class="print-grid">
+      ${card("green", "Top regiões", `<ol class="print-rank">${this.renderRank(regioes)}</ol>`)}
+      ${card(
+        "blue",
+        "Distribuição PCD",
+        `<ol class="print-rank">
+          <li><span>Regulares</span><b>${this.formatarNumero(totais.regulares)}</b></li>
+          <li><span>Inclusivas</span><b>${this.formatarNumero(totais.inclusiva)}</b></li>
+          <li><span>Exclusivas PCD</span><b>${this.formatarNumero(totais.exclusiva)}</b></li>
+        </ol>`
+      )}
     </div>
+
+    <section class="print-analise">
+      <h2>Análises</h2>
+      <ul>
+        ${analises.map((texto) => `<li>${this.escapeHtml(texto)}</li>`).join("")}
+      </ul>
+    </section>
 
     <p class="print-more-info">
-      Para mais informações acesse: <a href="https://vagas.idt.org.br/">https://vagas.idt.org.br/</a>
+      Mais informações: recorte do extrato mais recente do Portal MTb, disponível em
+      <a href="https://vagas.idt.org.br/">https://vagas.idt.org.br/</a>
     </p>
 
     <footer class="print-footer">
-      Documento gerado pelo portal de Vagas de Emprego do IDT — página formatada em A4.
+      Documento interno do IDT para alta gestão — página formatada em A4.
     </footer>
   </div>
 </body>
@@ -1686,19 +1905,25 @@ const SalvarVagas = {
       link.textContent = "Gerando...";
     }
     try {
-      const res = await fetch("/api/vagas", { cache: "no-store" });
-      if (!res.ok) throw new Error(String(res.status));
-      const data = await res.json();
+      const [resVagas, geojson, paleta, logoSrc] = await Promise.all([
+        fetch("/api/vagas", { cache: "no-store" }),
+        fetch("/api/geo/ce-regioes").then((res) => (res.ok ? res.json() : { type: "FeatureCollection", features: [] })),
+        fetch("/api/geo/regioes-paleta").then((res) => (res.ok ? res.json() : { regioes: [], cores: {} })),
+        this.obterLogoSrc(),
+      ]);
+      if (!resVagas.ok) throw new Error(String(resVagas.status));
+      const data = await resVagas.json();
       const vagas = Array.isArray(data && data.vagas) ? data.vagas : [];
       if (!vagas.length) {
         alert("Não há vagas disponíveis para montar o relatório agora.");
         return;
       }
-      const logoSrc = await this.obterLogoSrc();
       const html = this.montarRelatorioCartela({
         vagas,
         ultimaAtualizacao: data.ultima_atualizacao || "",
         logoSrc,
+        geojson,
+        paleta,
       });
       this.abrirImpressao(html);
     } catch (error) {
