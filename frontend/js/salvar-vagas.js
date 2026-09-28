@@ -743,14 +743,30 @@ const SalvarVagas = {
 
       .print-rank li {
         display: flex;
+        align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
         color: #334155;
         font-size: 12px;
         font-weight: 700;
       }
 
+      .print-rank__n {
+        flex: 0 0 1.15em;
+        color: #003d68;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .print-rank__txt {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .print-rank b {
+        flex: 0 0 auto;
         color: #003d68;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
@@ -870,6 +886,15 @@ const SalvarVagas = {
       .print-page--gestao .print-board,
       .print-page--gestao .print-grid {
         margin-bottom: 8px;
+      }
+
+      .print-page--gestao .print-rank {
+        margin-top: 6px;
+        gap: 4px;
+      }
+
+      .print-page--gestao .print-rank li {
+        font-size: 11px;
       }
 
       .print-page--gestao .print-map__frame {
@@ -1890,16 +1915,16 @@ const SalvarVagas = {
     }
     return itens
       .map(
-        (item) =>
-          `<li><span>${this.escapeHtml(item.texto)}</span><b>${this.formatarNumero(item.total)}</b></li>`
+        (item, i) =>
+          `<li><span class="print-rank__n">${i + 1}</span><span class="print-rank__txt" title="${this.escapeHtml(item.texto)}">${this.escapeHtml(item.texto)}</span><b>${this.formatarNumero(item.total)}</b></li>`
       )
       .join("");
   },
 
   montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta }) {
     const totais = this.totaisPcd(vagas);
-    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
-    const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
+    const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 8);
+    const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 8);
     const regioes = this.rankingPor(vagas, (vaga) => vaga.regional, 5);
     const unidades = this.rankingPor(
       vagas,
