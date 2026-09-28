@@ -94,6 +94,7 @@ railway up
 | `/api/vagas` | JSON com lista de vagas |
 | `/api/unidades/geojson` | GeoJSON das unidades |
 | `/api/geo/ce-regioes` | GeoJSON das regiões do CE |
+| `/api/relatorio/analise/status` | `chave_configurada` e o modelo do Gemini (sem expor a chave) |
 
 ## Variáveis de ambiente
 
@@ -104,7 +105,7 @@ railway up
 | `VAGAS_IMO_API_URL` | URL da API de vagas | Só altere se o endereço da API mudar |
 | `VAGAS_IMO_DIAS_HISTORICO` | `7` | Quantos dias buscar para calcular “dias ofertadas” |
 | `GEMINI_API_KEY` | — | Chave do Gemini para as análises do relatório gerencial (opcional) |
-| `GEMINI_MODEL` | `gemini-2.0-flash` | Modelo do Gemini usado no relatório |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | Modelo do Gemini usado no relatório (`gemini-2.0-flash` foi desligado) |
 
 ## Build local
 

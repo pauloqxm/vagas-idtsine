@@ -1859,7 +1859,24 @@ const SalvarVagas = {
       .join("");
   },
 
-  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta, analises: analisesEntrada, fonteAnalise }) {
+  textoMotivoAnalise(motivo) {
+    const mapa = {
+      ok: "Análise gerada pelo Gemini.",
+      sem_chave: "GEMINI_API_KEY ausente no servidor.",
+      chave_invalida: "A chave do Gemini foi recusada.",
+      modelo_indisponivel: "O modelo do Gemini não está disponível.",
+      limite_gemini: "O Gemini atingiu o limite de uso.",
+      resposta_vazia: "O Gemini não devolveu texto utilizável.",
+      erro_rede: "Falha de rede ao chamar o Gemini.",
+      erro_gemini: "Falha na chamada ao Gemini.",
+    };
+    const chave = String(motivo || "").trim().toLowerCase();
+    if (mapa[chave]) return mapa[chave];
+    if (chave.startsWith("http_")) return `O Gemini respondeu HTTP ${chave.slice(5)}.`;
+    return "";
+  },
+
+  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta, analises: analisesEntrada, fonteAnalise, motivoAnalise }) {
     const totais = this.totaisPcd(vagas);
     const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
     const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
@@ -1900,6 +1917,7 @@ const SalvarVagas = {
     const geminiAtivo = String(fonteAnalise || "").toLowerCase() === "gemini";
     const seloAnalise = geminiAtivo ? "Análise: Gemini" : "Análise automática";
     const seloClasse = geminiAtivo ? "print-analise__selo print-analise__selo--gemini" : "print-analise__selo";
+    const seloTitulo = this.textoMotivoAnalise(motivoAnalise);
 
     const card = (tom, titulo, corpo) => `
       <article class="print-card print-card--${tom}">
@@ -1982,7 +2000,7 @@ const SalvarVagas = {
     <section class="print-analise">
       <div class="print-analise__head">
         <h2>Análises</h2>
-        <span class="${seloClasse}">${this.escapeHtml(seloAnalise)}</span>
+        <span class="${seloClasse}"${seloTitulo ? ` title="${this.escapeHtml(seloTitulo)}"` : ""}>${this.escapeHtml(seloAnalise)}</span>
       </div>
       <ul>
         ${analises.map((texto) => `<li>${this.escapeHtml(texto)}</li>`).join("")}
@@ -2047,10 +2065,10 @@ const SalvarVagas = {
         ? data.textos.map((item) => String(item || "").trim()).filter(Boolean)
         : [];
       if (textos.length) {
-        return {
-          textos,
-          fonte: String((data && data.fonte) || "regra").toLowerCase() === "gemini" ? "gemini" : "regra",
-        };
+        const fonte = String((data && data.fonte) || "regra").toLowerCase() === "gemini" ? "gemini" : "regra";
+        const motivo = String((data && data.motivo) || (fonte === "gemini" ? "ok" : "regra")).trim();
+        console.info("Análise do relatório:", fonte, motivo, data && data.modelo);
+        return { textos, fonte, motivo };
       }
     } catch (error) {
       console.warn("Análise do relatório usou o texto padrão.", error);
@@ -2066,6 +2084,7 @@ const SalvarVagas = {
         ocupacoes: resumo.ocupacoes_top,
       }),
       fonte: "regra",
+      motivo: "erro_gemini",
     };
   },
 
@@ -2099,6 +2118,7 @@ const SalvarVagas = {
         paleta,
         analises: resultadoAnalise.textos,
         fonteAnalise: resultadoAnalise.fonte,
+        motivoAnalise: resultadoAnalise.motivo,
       });
       this.abrirImpressao(html);
     } catch (error) {

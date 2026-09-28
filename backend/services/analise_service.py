@@ -16,15 +16,63 @@ GEMINI_URL_PADRAO = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "{modelo}:generateContent"
 )
-MODELO_PADRAO = "gemini-2.0-flash"
+MODELO_PADRAO = "gemini-3.5-flash"
+MODELOS_SUBSTITUTOS = {
+    "gemini-2.0-flash": MODELO_PADRAO,
+    "gemini-2.0-flash-001": MODELO_PADRAO,
+    "gemini-2.0-flash-lite": "gemini-3.5-flash-lite",
+    "gemini-2.0-flash-lite-001": "gemini-3.5-flash-lite",
+}
 
 
 def _api_key() -> str:
     return str(os.getenv("GEMINI_API_KEY") or "").strip()
 
 
-def _modelo() -> str:
+def _modelo_configurado() -> str:
     return str(os.getenv("GEMINI_MODEL") or MODELO_PADRAO).strip() or MODELO_PADRAO
+
+
+def _modelo() -> str:
+    return MODELOS_SUBSTITUTOS.get(_modelo_configurado(), _modelo_configurado())
+
+
+def status_analise() -> Dict[str, Any]:
+    return {
+        "chave_configurada": bool(_api_key()),
+        "modelo": _modelo(),
+        "modelo_configurado": _modelo_configurado(),
+    }
+
+
+def _motivo_http(exc: Exception) -> str:
+    resp = getattr(exc, "response", None)
+    status = getattr(resp, "status_code", None)
+    if status == 404:
+        return "modelo_indisponivel"
+    if status in (401, 403):
+        return "chave_invalida"
+    if status == 429:
+        return "limite_gemini"
+    if status:
+        return f"http_{status}"
+    if isinstance(exc, (requests.Timeout, requests.ConnectionError)):
+        return "erro_rede"
+    return "erro_gemini"
+
+
+def _detalhe_erro(exc: Exception) -> str:
+    resp = getattr(exc, "response", None)
+    texto = ""
+    if resp is not None:
+        try:
+            texto = str(resp.text or "")[:180]
+        except Exception:
+            texto = ""
+    detalhe = f"{type(exc).__name__}: {exc}"
+    if texto:
+        detalhe = f"{detalhe} | {texto}"
+    return detalhe.replace(_api_key(), "***")[:280]
 
 
 def _pct(parte: int, total: int) -> str:
@@ -173,12 +221,21 @@ def _chamar_gemini(resumo: Dict[str, Any]) -> List[str]:
 def analisar_resumo(resumo: Any) -> Dict[str, Any]:
     dados = limpar_resumo(resumo)
     fallback = textos_regra(dados)
+    base = {"modelo": _modelo(), "modelo_configurado": _modelo_configurado()}
     if not _api_key():
-        return {"textos": fallback, "fonte": "regra"}
+        logger.warning("Análise Gemini não usada: GEMINI_API_KEY ausente.")
+        return {**base, "textos": fallback, "fonte": "regra", "motivo": "sem_chave"}
     try:
         textos = _chamar_gemini(dados)
         if textos:
-            return {"textos": textos, "fonte": "gemini"}
+            return {**base, "textos": textos, "fonte": "gemini", "motivo": "ok"}
+        logger.warning("Gemini respondeu sem textos utilizáveis.")
+        return {**base, "textos": fallback, "fonte": "regra", "motivo": "resposta_vazia"}
     except Exception as exc:
-        logger.warning("Falha na análise Gemini; usando regras. (%s)", exc)
-    return {"textos": fallback, "fonte": "regra"}
+        motivo = _motivo_http(exc)
+        logger.warning(
+            "Falha na análise Gemini; usando regras. motivo=%s detalhe=%s",
+            motivo,
+            _detalhe_erro(exc),
+        )
+        return {**base, "textos": fallback, "fonte": "regra", "motivo": motivo}

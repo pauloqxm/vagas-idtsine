@@ -80,6 +80,14 @@ def criar_oferta_vaga(body: dict = Body(...)):
     return JSONResponse(status_code=status if 200 <= status < 600 else 502, content=resposta)
 
 
+@router.get("/relatorio/analise/status")
+def status_analise_relatorio():
+    return JSONResponse(
+        content=analise_service.status_analise(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 @router.post("/relatorio/analise")
 def analisar_relatorio(body: dict = Body(default={})):
     return JSONResponse(
