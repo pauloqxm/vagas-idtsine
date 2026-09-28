@@ -74,7 +74,7 @@ Inclua `ce_regioes.geojson` no repositório — o mapa usa `/api/geo/ce-regioes`
 3. Selecione o repositório
 4. Railway detecta o `Dockerfile` e faz o build
 5. Em **Settings** → **Networking** → **Generate Domain**
-6. Em **Variables**, crie `VAGAS_IMO_API_KEY` com a chave da API e `GEMINI_API_KEY` com a chave do Gemini (não coloque as chaves no Git)
+6. Em **Variables**, crie `VAGAS_IMO_API_KEY` com a chave da API (não coloque a chave no Git)
 
 ### CLI
 
@@ -94,7 +94,6 @@ railway up
 | `/api/vagas` | JSON com lista de vagas |
 | `/api/unidades/geojson` | GeoJSON das unidades |
 | `/api/geo/ce-regioes` | GeoJSON das regiões do CE |
-| `/api/relatorio/analise/status` | `chave_configurada` e o modelo do Gemini (sem expor a chave) |
 
 ## Variáveis de ambiente
 
@@ -104,8 +103,6 @@ railway up
 | `VAGAS_IMO_API_KEY` | — | Chave enviada no header `x-api-key` (obrigatória em produção) |
 | `VAGAS_IMO_API_URL` | URL da API de vagas | Só altere se o endereço da API mudar |
 | `VAGAS_IMO_DIAS_HISTORICO` | `7` | Quantos dias buscar para calcular “dias ofertadas” |
-| `GEMINI_API_KEY` | — | Chave do Gemini para as análises do relatório gerencial (opcional) |
-| `GEMINI_MODEL` | `gemini-3.5-flash` | Modelo do Gemini usado no relatório (`gemini-2.0-flash` foi desligado) |
 
 ## Build local
 
