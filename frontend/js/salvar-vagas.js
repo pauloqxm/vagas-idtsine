@@ -816,10 +816,34 @@ const SalvarVagas = {
         background: #fff;
       }
 
+      .print-analise__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
       .print-analise h2 {
-        margin: 0 0 8px;
+        margin: 0;
         color: #003d68;
         font-size: 14px;
+      }
+
+      .print-analise__selo {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #eaf3f8;
+        color: #5f6b84;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+
+      .print-analise__selo--gemini {
+        background: #e8f7ef;
+        color: #00763f;
       }
 
       .print-analise ul {
@@ -1835,7 +1859,7 @@ const SalvarVagas = {
       .join("");
   },
 
-  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta, analises: analisesEntrada }) {
+  montarRelatorioCartela({ vagas, ultimaAtualizacao, logoSrc, geojson, paleta, analises: analisesEntrada, fonteAnalise }) {
     const totais = this.totaisPcd(vagas);
     const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
     const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
@@ -1873,6 +1897,9 @@ const SalvarVagas = {
     const geradoEm = this.dataHoraHojeBR();
     const logo = logoSrc || "https://www.idt.org.br/assets/img/logos/logo_grande.png";
     const mapaSvg = this.montarSvgMapa(geojson, paleta, totaisMunicipio);
+    const geminiAtivo = String(fonteAnalise || "").toLowerCase() === "gemini";
+    const seloAnalise = geminiAtivo ? "Análise: Gemini" : "Análise automática";
+    const seloClasse = geminiAtivo ? "print-analise__selo print-analise__selo--gemini" : "print-analise__selo";
 
     const card = (tom, titulo, corpo) => `
       <article class="print-card print-card--${tom}">
@@ -1953,7 +1980,10 @@ const SalvarVagas = {
     </div>
 
     <section class="print-analise">
-      <h2>Análises</h2>
+      <div class="print-analise__head">
+        <h2>Análises</h2>
+        <span class="${seloClasse}">${this.escapeHtml(seloAnalise)}</span>
+      </div>
       <ul>
         ${analises.map((texto) => `<li>${this.escapeHtml(texto)}</li>`).join("")}
       </ul>
@@ -2013,21 +2043,30 @@ const SalvarVagas = {
       });
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
-      if (Array.isArray(data && data.textos) && data.textos.length) {
-        return data.textos.map((item) => String(item || "").trim()).filter(Boolean);
+      const textos = Array.isArray(data && data.textos)
+        ? data.textos.map((item) => String(item || "").trim()).filter(Boolean)
+        : [];
+      if (textos.length) {
+        return {
+          textos,
+          fonte: String((data && data.fonte) || "regra").toLowerCase() === "gemini" ? "gemini" : "regra",
+        };
       }
     } catch (error) {
       console.warn("Análise do relatório usou o texto padrão.", error);
     }
-    return this.textosAnalise({
-      total: resumo.total,
-      inclusiva: resumo.inclusiva,
-      exclusiva: resumo.exclusiva,
-      regulares: resumo.regulares,
-      municipios: resumo.municipios,
-      regioes: resumo.regioes,
-      ocupacoes: resumo.ocupacoes_top,
-    });
+    return {
+      textos: this.textosAnalise({
+        total: resumo.total,
+        inclusiva: resumo.inclusiva,
+        exclusiva: resumo.exclusiva,
+        regulares: resumo.regulares,
+        municipios: resumo.municipios,
+        regioes: resumo.regioes,
+        ocupacoes: resumo.ocupacoes_top,
+      }),
+      fonte: "regra",
+    };
   },
 
   async imprimirRelatorio(link) {
@@ -2051,14 +2090,15 @@ const SalvarVagas = {
         return;
       }
       const resumo = this.montarResumoRelatorio(vagas, data.ultima_atualizacao || "");
-      const analises = await this.buscarAnalises(resumo);
+      const resultadoAnalise = await this.buscarAnalises(resumo);
       const html = this.montarRelatorioCartela({
         vagas,
         ultimaAtualizacao: data.ultima_atualizacao || "",
         logoSrc,
         geojson,
         paleta,
-        analises,
+        analises: resultadoAnalise.textos,
+        fonteAnalise: resultadoAnalise.fonte,
       });
       this.abrirImpressao(html);
     } catch (error) {
