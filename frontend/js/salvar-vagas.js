@@ -249,7 +249,7 @@ const SalvarVagas = {
 
       @page gestao {
         size: A4 portrait;
-        margin: 8mm 8mm;
+        margin: 10mm 10mm;
       }
 
       * { box-sizing: border-box; }
@@ -860,136 +860,30 @@ const SalvarVagas = {
 
       .print-page--gestao {
         page: gestao;
-        max-width: 194mm;
-        padding: 0;
       }
 
       .print-page--gestao .print-header {
-        gap: 6px;
-        padding: 8px 10px;
-        margin-bottom: 6px;
-        border-radius: 10px;
-      }
-
-      .print-page--gestao .print-header__brand {
-        gap: 8px;
-      }
-
-      .print-page--gestao .print-logo {
-        height: 36px;
-        max-width: 130px;
-      }
-
-      .print-page--gestao .print-header__title {
-        font-size: 15px;
-      }
-
-      .print-page--gestao .print-header__title span {
-        font-size: 11px;
-      }
-
-      .print-page--gestao .print-header__meta {
-        font-size: 10px;
-        line-height: 1.3;
+        margin-bottom: 10px;
       }
 
       .print-page--gestao .print-hero {
-        gap: 2px;
-        margin-bottom: 6px;
-        padding: 8px 10px;
-        border-radius: 10px;
-      }
-
-      .print-page--gestao .print-hero b {
-        font-size: 26px;
-      }
-
-      .print-page--gestao .print-hero span {
-        font-size: 11px;
-      }
-
-      .print-page--gestao .print-summary--gestao,
-      .print-page--gestao .print-summary__row {
-        gap: 5px;
+        margin-bottom: 10px;
+        padding: 14px 14px;
       }
 
       .print-page--gestao .print-summary--gestao {
-        margin-bottom: 6px;
-      }
-
-      .print-page--gestao .print-summary--gestao .print-summary__item {
-        min-height: 26px;
-        padding: 4px 8px;
-        font-size: 10px;
+        margin-bottom: 10px;
       }
 
       .print-page--gestao .print-board,
       .print-page--gestao .print-grid {
-        gap: 6px;
-        margin-bottom: 6px;
-      }
-
-      .print-page--gestao .print-map {
-        padding: 6px 8px 8px;
-        border-radius: 10px;
-      }
-
-      .print-page--gestao .print-map__title,
-      .print-page--gestao .print-analise h2,
-      .print-page--gestao .print-card__title {
-        font-size: 12px;
+        margin-bottom: 8px;
       }
 
       .print-page--gestao .print-map svg {
         width: 100%;
-        height: 68mm;
-      }
-
-      .print-page--gestao .print-board__side {
-        gap: 6px;
-      }
-
-      .print-page--gestao .print-card__body {
-        padding: 6px 8px;
-      }
-
-      .print-page--gestao .print-rank {
-        margin-top: 4px;
-        gap: 3px;
-      }
-
-      .print-page--gestao .print-rank li {
-        font-size: 10px;
-      }
-
-      .print-page--gestao .print-analise {
-        margin-bottom: 6px;
-        padding: 6px 8px;
-        border-radius: 10px;
-      }
-
-      .print-page--gestao .print-analise__head {
-        margin-bottom: 4px;
-      }
-
-      .print-page--gestao .print-analise ul {
-        font-size: 10px;
-        line-height: 1.3;
-      }
-
-      .print-page--gestao .print-analise li + li {
-        margin-top: 2px;
-      }
-
-      .print-page--gestao .print-more-info {
-        margin-top: 4px;
-        font-size: 10px;
-      }
-
-      .print-page--gestao .print-footer {
-        margin-top: 6px;
-        padding-top: 6px;
-        font-size: 9px;
+        height: auto;
+        max-height: 102mm;
       }
 
       @media print {
