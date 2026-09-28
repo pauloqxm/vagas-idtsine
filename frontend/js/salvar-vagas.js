@@ -1901,6 +1901,11 @@ const SalvarVagas = {
     const ocupacoes = this.rankingPor(vagas, (vaga) => vaga.ocupacao, 5);
     const municipios = this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho, 5);
     const regioes = this.rankingPor(vagas, (vaga) => vaga.regional, 5);
+    const unidades = this.rankingPor(
+      vagas,
+      (vaga) => this.descricaoUnidade(vaga) || vaga.posto_atendimento,
+      5
+    );
     const totaisMunicipio = new Map();
     this.rankingPor(vagas, (vaga) => vaga.municipio_trabalho).forEach((item) => {
       totaisMunicipio.set(this.normalizar(item.texto), item);
@@ -2000,15 +2005,7 @@ const SalvarVagas = {
 
     <div class="print-grid">
       ${card("green", "Top regiões", `<ol class="print-rank">${this.renderRank(regioes)}</ol>`)}
-      ${card(
-        "blue",
-        "Distribuição PCD",
-        `<ol class="print-rank">
-          <li><span>Regulares</span><b>${this.formatarNumero(totais.regulares)}</b></li>
-          <li><span>Inclusivas</span><b>${this.formatarNumero(totais.inclusiva)}</b></li>
-          <li><span>Exclusivas PCD</span><b>${this.formatarNumero(totais.exclusiva)}</b></li>
-        </ol>`
-      )}
+      ${card("blue", "Top unidades", `<ol class="print-rank">${this.renderRank(unidades)}</ol>`)}
     </div>
 
     <section class="print-analise">
