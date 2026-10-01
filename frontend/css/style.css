@@ -1558,15 +1558,20 @@ h1 {
   cursor: pointer;
 }
 
+.modal__box h2 {
+  margin: 0 2.6rem 0 0;
+  line-height: 1.25;
+}
+
 .detail-list {
   display: grid;
-  gap: 0.65rem;
-  margin: 1rem 0;
+  gap: 0.32rem;
+  margin: 0.7rem 0;
 }
 
 .detail-list div {
-  padding: 0.75rem;
-  border-radius: 12px;
+  padding: 0.38rem 0.7rem;
+  border-radius: 10px;
   background: #f7f8fb;
 }
 
@@ -2196,13 +2201,13 @@ h1 {
 
 .popup-kv {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.32rem;
 }
 
 .popup-row {
   display: grid;
   grid-template-columns: minmax(6.5rem, 32%) minmax(0, 1fr);
-  gap: 0.55rem;
+  gap: 0.35rem;
   align-items: start;
 }
 

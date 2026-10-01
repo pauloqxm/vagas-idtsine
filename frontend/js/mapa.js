@@ -1119,11 +1119,11 @@ function buildVagaPopupHtml(props) {
         ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
+        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
         ${htmlLinhaPopup("Experiência", escapeHtml(String(props.experiencia || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Município do trabalho", escapeHtml(String(props.municipio_trabalho || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Perfil", escapeHtml(rotuloPcdProps(props)))}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
-        ${htmlLinhaPopup("E-mail", emailHtml)}
       </div>
       <div class="popup-actions">
         ${htmlAgendamentoPopup(props)}
@@ -1135,6 +1135,10 @@ function buildVagaPopupHtml(props) {
 function buildUnidadePopupHtml(props, coords) {
   const telefone = String(props.telefone_unidade || "").trim();
   const celular = String(props.celular_responsavel || "").trim();
+  const email = String(props.email_responsavel || props.email_contato || "").trim();
+  const emailHtml = email
+    ? `<a href="mailto:${escapeAttr(email)}">${escapeHtml(email)}</a>`
+    : escapeHtml("Não informado");
   return `
     <div class="popup-rich popup-rich--unidade">
       <h4 id="map-popup-titulo">${escapeHtml(props.unidade || "Unidade IDT")}</h4>
@@ -1144,6 +1148,7 @@ function buildUnidadePopupHtml(props, coords) {
         ${htmlLinhaPopup("Endereço", escapeHtml(props.endereco || "Não informado"))}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
         ${htmlLinhaPopup("Celular", htmlTelefonePopup(celular))}
+        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
       </div>
       <div class="popup-actions">
         ${htmlAgendamentoPopup(props)}

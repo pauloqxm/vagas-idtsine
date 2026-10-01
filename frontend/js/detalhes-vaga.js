@@ -49,6 +49,7 @@ const DetalhesVaga = {
       responsavel_unidade: posto.responsavel || vaga.responsavel_unidade || "",
       telefone_unidade: posto.telefone_unidade || vaga.telefone_unidade || "",
       celular_responsavel: posto.celular_responsavel || vaga.celular_responsavel || "",
+      email_contato: posto.email_responsavel || vaga.email_contato || "",
       endereco: posto.endereco || vaga.endereco || "",
       bairro: posto.bairro || vaga.bairro || "",
       municipio: posto.municipio || vaga.municipio || "",
@@ -95,6 +96,7 @@ const DetalhesVaga = {
         <div><strong>Quantidade:</strong> ${this.qtde(dados)} vaga(s)</div>
         <div><strong>Município:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
+        ${this.detalheEmailOuNaoInformado("E-mail da Unidade", email)}
         <div><strong>Escolaridade:</strong> ${this.escapeHtml(String(dados.escolaridade || "").trim() || "Não informado")}</div>
         <div><strong>Contratação:</strong> ${this.escapeHtml(String(dados.tipo_contratacao || "").trim() || "Não informado")}</div>
         <div><strong>Experiência:</strong> ${this.escapeHtml(String(dados.experiencia || "").trim() || "Não informado")}</div>
@@ -109,7 +111,6 @@ const DetalhesVaga = {
         ${this.detalheTelefoneOuNaoInformado("Telefone da unidade", telefoneUnidade)}`
             : ""
         }
-        ${email ? `<div><strong>E-mail:</strong> <a href="mailto:${this.escapeAttr(email)}">${this.escapeHtml(email)}</a></div>` : ""}
       </div>
       <div class="modal-actions">
         ${this.htmlAgendamento(dados)}
@@ -263,6 +264,14 @@ const DetalhesVaga = {
       el.addEventListener("click", () => dialog.remove());
     });
     document.body.appendChild(dialog);
+  },
+
+  detalheEmailOuNaoInformado(rotulo, valor) {
+    const texto = String(valor || "").trim();
+    if (!texto) {
+      return `<div><strong>${this.escapeHtml(rotulo)}:</strong> Não informado</div>`;
+    }
+    return `<div><strong>${this.escapeHtml(rotulo)}:</strong> <a href="mailto:${this.escapeAttr(texto)}">${this.escapeHtml(texto)}</a></div>`;
   },
 
   detalheTelefone(rotulo, valor) {

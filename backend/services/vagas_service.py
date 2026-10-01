@@ -295,8 +295,12 @@ def _load_unidades_coords() -> Dict[str, Dict[str, Any]]:
             codigo = _celula(row, cols, "posto_atendimento", "posto atendimento")
             if not codigo:
                 continue
-            tipo_ou_email = _celula(row, cols, "tipo", "email")
-            email = _email_da_coluna_tipo(tipo_ou_email)
+            tipo_posto = _limpar_texto(_celula(row, cols, "tipo"))
+            email = _email_da_coluna_tipo(_celula(row, cols, "email"))
+            if not email:
+                email = _email_da_coluna_tipo(tipo_posto)
+                if email:
+                    tipo_posto = ""
             result[codigo] = {
                 "municipio": _celula(row, cols, "municipio"),
                 "unidade": _celula(row, cols, "posto", "unidade"),
@@ -304,7 +308,7 @@ def _load_unidades_coords() -> Dict[str, Dict[str, Any]]:
                 "telefone_unidade": _limpar_texto(_celula(row, cols, "telefone da unidade", "telefone")),
                 "celular_responsavel": _limpar_texto(_celula(row, cols, "celular do responsavel", "celular")),
                 "email_responsavel": email,
-                "tipo_posto": "" if email else _limpar_texto(tipo_ou_email),
+                "tipo_posto": tipo_posto,
                 "bairro": _limpar_texto(_celula(row, cols, "bairro")),
                 "endereco": _limpar_texto(_celula(row, cols, "endereco")),
                 "latitude": _parse_float_br(_celula(row, cols, "latitude")),
@@ -698,6 +702,7 @@ def get_postos_atendimento() -> Dict[str, Dict[str, Any]]:
             "responsavel": info.get("responsavel", ""),
             "telefone_unidade": info.get("telefone_unidade", ""),
             "celular_responsavel": info.get("celular_responsavel", ""),
+            "email_responsavel": info.get("email_responsavel", ""),
             "endereco": info.get("endereco", ""),
             "bairro": info.get("bairro", ""),
             "gestao": info.get("gestao", ""),
