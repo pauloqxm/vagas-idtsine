@@ -1119,10 +1119,10 @@ function buildVagaPopupHtml(props) {
         ${htmlLinhaPopup("Vagas", escapeHtml(String(Number(props.qtde_vagas) || 1)))}
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
-        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
         ${htmlLinhaPopup("Experiência", escapeHtml(String(props.experiencia || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Município do trabalho", escapeHtml(String(props.municipio_trabalho || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Perfil", escapeHtml(rotuloPcdProps(props)))}
+        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
       </div>
       <div class="popup-actions">
@@ -1146,9 +1146,9 @@ function buildUnidadePopupHtml(props, coords) {
         ${htmlLinhaPopup("Município", escapeHtml(props.municipio || "Não informado"))}
         ${htmlLinhaPopup("Vagas recentes", escapeHtml(String(Number(props.ofertas_data_recente) || 0)))}
         ${htmlLinhaPopup("Endereço", escapeHtml(props.endereco || "Não informado"))}
+        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
         ${htmlLinhaPopup("Celular", htmlTelefonePopup(celular))}
-        ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
       </div>
       <div class="popup-actions">
         ${htmlAgendamentoPopup(props)}

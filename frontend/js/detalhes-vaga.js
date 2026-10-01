@@ -96,7 +96,6 @@ const DetalhesVaga = {
         <div><strong>Quantidade:</strong> ${this.qtde(dados)} vaga(s)</div>
         <div><strong>Município:</strong> ${this.escapeHtml(dados.municipio || "Não informado")}</div>
         <div><strong>Unidade:</strong> ${this.escapeHtml(dados.unidade || "Não informado")}</div>
-        ${this.detalheEmailOuNaoInformado("E-mail da Unidade", email)}
         <div><strong>Escolaridade:</strong> ${this.escapeHtml(String(dados.escolaridade || "").trim() || "Não informado")}</div>
         <div><strong>Contratação:</strong> ${this.escapeHtml(String(dados.tipo_contratacao || "").trim() || "Não informado")}</div>
         <div><strong>Experiência:</strong> ${this.escapeHtml(String(dados.experiencia || "").trim() || "Não informado")}</div>
@@ -108,8 +107,9 @@ const DetalhesVaga = {
         ${
           posto || dados.posto_atendimento
             ? `<div><strong>Responsável:</strong> ${this.escapeHtml(responsavelUnidade || "Não informado")}</div>
+        ${this.detalheEmailOuNaoInformado("E-mail da Unidade", email)}
         ${this.detalheTelefoneOuNaoInformado("Telefone da unidade", telefoneUnidade)}`
-            : ""
+            : `${this.detalheEmailOuNaoInformado("E-mail da Unidade", email)}`
         }
       </div>
       <div class="modal-actions">
