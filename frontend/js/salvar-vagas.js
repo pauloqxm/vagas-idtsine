@@ -157,7 +157,7 @@ const SalvarVagas = {
             <span><strong>Contratação:</strong> ${this.escapeHtml(String(vaga.tipo_contratacao || "").trim() || "Não informado")}</span>
             <span><strong>Experiência:</strong> ${this.escapeHtml(String(vaga.experiencia || "").trim() || "Não informado")}</span>
             <span><strong>Município do trabalho:</strong> ${this.escapeHtml(String(vaga.municipio_trabalho || "").trim() || "Não informado")}</span>
-            <span><strong>Salário:</strong> ${this.escapeHtml(String(vaga.salario || "").trim() || "Não informado")}</span>
+            <span><strong>Salário:</strong> ${this.escapeHtml(DetalhesVaga.formatarSalario(vaga.salario))}</span>
           </div>
           <div class="print-card__tags">
             ${

@@ -766,7 +766,7 @@ function renderCard(vaga) {
             <span><strong>Contratação:</strong> ${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</span>
             <span><strong>Experiência:</strong> ${escapeHtml(textoCampo(vaga, "experiencia") || "Não informado")}</span>
             <span><strong>Município do trabalho:</strong> ${escapeHtml(textoCampo(vaga, "municipio_trabalho") || "Não informado")}</span>
-            <span><strong>Salário:</strong> ${escapeHtml(textoCampo(vaga, "salario") || "Não informado")}</span>
+            <span><strong>Salário:</strong> ${escapeHtml(DetalhesVaga.formatarSalario(vaga.salario))}</span>
           </div>
         </div>
         <span class="vaga-qty">${qtde(vaga)} vaga(s)</span>
@@ -803,7 +803,7 @@ function renderLinhaTabela(vaga) {
       <td data-label="Contratação">${escapeHtml(textoCampo(vaga, "tipo_contratacao") || "Não informado")}</td>
       <td data-label="Experiência">${escapeHtml(textoCampo(vaga, "experiencia") || "Não informado")}</td>
       <td data-label="Município do trabalho">${escapeHtml(textoCampo(vaga, "municipio_trabalho") || "Não informado")}</td>
-      <td data-label="Salário">${escapeHtml(textoCampo(vaga, "salario") || "Não informado")}</td>
+      <td data-label="Salário">${escapeHtml(DetalhesVaga.formatarSalario(vaga.salario))}</td>
       <td data-label="Publicada">${escapeHtml(dataExibicao(vaga.data_disponibilidade) || "—")}</td>
       <td data-label="PCD"><span class="vagas-pcd ${categoria !== "regular" ? "is-pcd" : ""}">${escapeHtml(rotulo)}</span></td>
       <td data-label="Ações">

@@ -75,6 +75,30 @@ const DetalhesVaga = {
     return Number.isFinite(valor) && valor > 0 ? valor : 1;
   },
 
+  formatarSalario(valor) {
+    const s = String(valor == null ? "" : valor).trim();
+    if (!s) return "Não informado";
+    const chave = s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    if (chave === "nao informado" || chave === "-" || chave === "—") return "Não informado";
+    const bruto = s.replace(/R\$/gi, "").replace(/\s/g, "");
+    let numero;
+    if (bruto.includes(",")) {
+      numero = Number(bruto.replace(/\./g, "").replace(",", "."));
+    } else if (bruto.includes(".")) {
+      const ultima = bruto.split(".").pop() || "";
+      numero = Number(/^\d{3}$/.test(ultima) ? bruto.replace(/\./g, "") : bruto);
+    } else {
+      numero = Number(bruto);
+    }
+    if (!Number.isFinite(numero) || numero <= 0) return "Não informado";
+    const [inteiro, frac] = numero.toFixed(2).split(".");
+    const milhar = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `R$ ${milhar},${frac}`;
+  },
+
   async abrir(vaga) {
     if (!vaga || !this.els.modal || !this.els.modalBody) return;
 
@@ -100,7 +124,7 @@ const DetalhesVaga = {
         <div><strong>Contratação:</strong> ${this.escapeHtml(String(dados.tipo_contratacao || "").trim() || "Não informado")}</div>
         <div><strong>Experiência:</strong> ${this.escapeHtml(String(dados.experiencia || "").trim() || "Não informado")}</div>
         <div><strong>Município do trabalho:</strong> ${this.escapeHtml(String(dados.municipio_trabalho || "").trim() || "Não informado")}</div>
-        <div><strong>Salário:</strong> ${this.escapeHtml(String(dados.salario || "").trim() || "Não informado")}</div>
+        <div><strong>Salário:</strong> ${this.escapeHtml(this.formatarSalario(dados.salario))}</div>
         ${dados.endereco ? `<div><strong>Endereço:</strong> ${this.escapeHtml(dados.endereco)}</div>` : ""}
         ${dados.data_disponibilidade ? `<div><strong>Data:</strong> ${this.escapeHtml(this.dataExibicao(dados.data_disponibilidade))}</div>` : ""}
         <div><strong>Dias ofertadas:</strong> ${this.diasOfertadas(dados)}</div>

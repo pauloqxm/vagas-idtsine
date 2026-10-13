@@ -89,18 +89,20 @@ def _salario_api(val: Any) -> str:
     s = _limpar_texto_informado(val)
     if not s:
         return ""
-    bruto = s.replace("R$", "").replace("r$", "").strip()
+    bruto = s.replace("R$", "").replace("r$", "").replace(" ", "")
     try:
-        if "," in bruto and "." in bruto:
+        if "," in bruto:
             numero = float(bruto.replace(".", "").replace(",", "."))
-        elif "," in bruto:
-            numero = float(bruto.replace(",", "."))
+        elif "." in bruto:
+            ultima = bruto.rsplit(".", 1)[-1]
+            if ultima.isdigit() and len(ultima) == 3:
+                numero = float(bruto.replace(".", ""))
+            else:
+                numero = float(bruto)
         else:
             numero = float(bruto)
         if numero <= 0:
             return ""
-        if abs(numero - round(numero)) < 0.005:
-            return f"R$ {int(round(numero)):,}".replace(",", ".")
         return "R$ " + f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except ValueError:
         return s
