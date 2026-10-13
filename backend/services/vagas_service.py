@@ -64,6 +64,48 @@ def _municipio_trabalho_api(val: Any) -> str:
     return s
 
 
+def _origem_local_trabalho(val: Any) -> str:
+    texto = _limpar_texto(val)
+    chave = _chave_coluna(texto)
+    if "posto" in chave:
+        return "Posto"
+    if "empregador" in chave:
+        return "Empregador"
+    return texto
+
+
+def _municipio_pela_origem(item: Dict[str, Any], info: Dict[str, Any]) -> str:
+    origem = _origem_local_trabalho(item.get("origemLocalTrabalho"))
+    do_empregador = _municipio_trabalho_api(
+        item.get("municipioTrabalho") or item.get("municipio")
+    )
+    do_posto = _limpar_texto(info.get("municipio") or "")
+    if origem == "Posto":
+        return do_posto or do_empregador
+    return do_empregador or do_posto
+
+
+def _salario_api(val: Any) -> str:
+    s = _limpar_texto_informado(val)
+    if not s:
+        return ""
+    bruto = s.replace("R$", "").replace("r$", "").strip()
+    try:
+        if "," in bruto and "." in bruto:
+            numero = float(bruto.replace(".", "").replace(",", "."))
+        elif "," in bruto:
+            numero = float(bruto.replace(",", "."))
+        else:
+            numero = float(bruto)
+        if numero <= 0:
+            return ""
+        if abs(numero - round(numero)) < 0.005:
+            return f"R$ {int(round(numero)):,}".replace(",", ".")
+        return "R$ " + f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except ValueError:
+        return s
+
+
 def _parse_int(val: str) -> int:
     try:
         return max(1, int(float(str(val).strip() or "1")))
@@ -374,6 +416,8 @@ def _row_para_vaga(row: List[str]) -> Optional[Dict[str, Any]]:
             "escolaridade": "",
             "experiencia": "",
             "municipio_trabalho": "",
+            "origem_local_trabalho": "",
+            "salario": "",
             "regional": "",
             "observacao": str(row[15] or "").strip() or None,
             "gestao": info.get("gestao", ""),
@@ -452,7 +496,9 @@ def _item_api_para_vaga(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         ),
         "escolaridade": _limpar_texto_informado(item.get("escolaridade")),
         "experiencia": _limpar_texto_informado(item.get("experiencia")),
-        "municipio_trabalho": _municipio_trabalho_api(item.get("municipioTrabalho")),
+        "municipio_trabalho": _municipio_pela_origem(item, info),
+        "origem_local_trabalho": _origem_local_trabalho(item.get("origemLocalTrabalho")),
+        "salario": _salario_api(item.get("salario")),
         "regional": "",
         "observacao": _limpar_texto(item.get("observacao") or "") or None,
         "gestao": info.get("gestao", ""),

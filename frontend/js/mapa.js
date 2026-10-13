@@ -1121,6 +1121,7 @@ function buildVagaPopupHtml(props) {
         ${htmlLinhaPopup("Unidade", escapeHtml(props.unidade || "Não informado"))}
         ${htmlLinhaPopup("Experiência", escapeHtml(String(props.experiencia || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Município do trabalho", escapeHtml(String(props.municipio_trabalho || "").trim() || "Não informado"))}
+        ${htmlLinhaPopup("Salário", escapeHtml(String(props.salario || "").trim() || "Não informado"))}
         ${htmlLinhaPopup("Perfil", escapeHtml(rotuloPcdProps(props)))}
         ${htmlLinhaPopup("E-mail da Unidade", emailHtml)}
         ${htmlLinhaPopup("Telefone", htmlTelefonePopup(telefone))}
