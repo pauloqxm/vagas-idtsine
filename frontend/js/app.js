@@ -317,8 +317,14 @@ function preencherSelect(select, valores, textoInicial) {
 }
 
 function popularFiltrosSuspensos() {
+  const unidadeAtual = String(els.unidade?.value || state.filtros.unidade || "").trim();
+  const municipioAtual = String(els.municipio?.value || state.filtros.municipio || "").trim();
   preencherSelect(els.unidade, unicoOrdenado("unidade"), "Todas");
   preencherSelect(els.municipio, unicoOrdenado("municipio_trabalho"), "Todos");
+  selecionarSeExistir(els.unidade, unidadeAtual);
+  selecionarSeExistir(els.municipio, municipioAtual);
+  state.filtros.unidade = els.unidade?.value || unidadeAtual;
+  state.filtros.municipio = els.municipio?.value || municipioAtual;
   if (els.escolaridade) {
     preencherSelect(els.escolaridade, unicoOrdenado("escolaridade"), "Todas");
   }
@@ -471,19 +477,27 @@ function render() {
   renderPaginacao();
 }
 
+function valorFiltro(select, estado) {
+  return String((select && select.value) || estado || "").trim();
+}
+
 function escopoCompartilhar() {
-  const municipio = String(els.municipio?.value || state.filtros.municipio || "").trim();
-  const unidade = String(els.unidade?.value || state.filtros.unidade || "").trim();
+  const municipio = valorFiltro(els.municipio, state.filtros.municipio);
+  const unidade = valorFiltro(els.unidade, state.filtros.unidade);
   const rotulo = [unidade, municipio].filter(Boolean).join(" — ");
   return { municipio, unidade, rotulo };
 }
 
 function atualizarBotaoCompartilhar() {
-  if (!els.compartilhar) return;
+  const botao = document.getElementById("btn-compartilhar") || els.compartilhar;
+  if (!botao) return;
+  els.compartilhar = botao;
   const { rotulo } = escopoCompartilhar();
   const habilitado = Boolean(rotulo);
-  els.compartilhar.disabled = !habilitado;
-  els.compartilhar.title = habilitado
+  botao.disabled = !habilitado;
+  if (habilitado) botao.removeAttribute("disabled");
+  else botao.setAttribute("disabled", "disabled");
+  botao.title = habilitado
     ? `Compartilhar as vagas de ${rotulo}`
     : "Selecione um município ou uma unidade para compartilhar as vagas";
 }
@@ -670,17 +684,19 @@ function renderPopulares() {
 function aplicarBuscaPopular(valor) {
   if (!valor) return;
   if (state.popularesTipo === "cidades") {
-    els.municipio.value = valor;
+    selecionarSeExistir(els.municipio, valor);
+    state.filtros.municipio = els.municipio.value || valor;
   } else if (state.popularesTipo === "unidades") {
-    els.unidade.value = valor;
+    selecionarSeExistir(els.unidade, valor);
+    state.filtros.unidade = els.unidade.value || valor;
   } else if (state.popularesTipo === "regioes") {
     state.filtros.regional = valor;
   } else {
     els.cargo.value = valor;
   }
   state.filtros.cargo = els.cargo.value.trim();
-  state.filtros.unidade = els.unidade.value;
-  state.filtros.municipio = els.municipio.value;
+  state.filtros.unidade = els.unidade.value || state.filtros.unidade;
+  state.filtros.municipio = els.municipio.value || state.filtros.municipio;
   state.filtros.escolaridade = els.escolaridade?.value || "";
   state.filtros.tipoContratacao = els.contratacao?.value || "";
   state.filtros.experiencia = els.experiencia?.value || "";
@@ -971,10 +987,13 @@ function bindEvents() {
     { select: els.unidade, tipo: "unidades" },
     { select: els.municipio, tipo: "cidades" },
   ].forEach(({ select, tipo }) => {
-    select.addEventListener("change", () => {
+    if (!select) return;
+    const aoMudar = () => {
       aplicarFiltrosDaTela();
       ativarAbaPopular(tipo);
-    });
+    };
+    select.addEventListener("change", aoMudar);
+    select.addEventListener("input", aoMudar);
   });
 
   [els.escolaridade, els.contratacao, els.experiencia].forEach((select) => {
