@@ -1010,11 +1010,14 @@ const SalvarVagas = {
     return `Segue em anexo o PDF com as vagas formatadas.\n\n${this.montarTextoWhatsApp(municipio)}`;
   },
 
-  montarLinkMunicipio(municipio, formato) {
+  montarLinkMunicipio(municipio, formato, unidade) {
     const url = new URL(window.location.href);
     url.search = "";
     url.hash = "";
-    url.searchParams.set("municipio", String(municipio || "").trim());
+    const municipioSel = String(municipio || "").trim();
+    const unidadeSel = String(unidade || "").trim();
+    if (municipioSel) url.searchParams.set("municipio", municipioSel);
+    if (unidadeSel) url.searchParams.set("unidade", unidadeSel);
     if (formato === "table" || formato === "tabela") {
       url.searchParams.set("view", "tabela");
     }
@@ -1404,7 +1407,7 @@ const SalvarVagas = {
     }
   },
 
-  async prepararPacote({ municipio, vagas, formato }) {
+  async prepararPacote({ municipio, municipioFiltro, unidade, vagas, formato }) {
     const municipioSel = String(municipio || "").trim();
     const lista = Array.isArray(vagas) ? vagas : [];
     const { total: totalVagas, regulares: totalRegulares, inclusiva: totalInclusiva, exclusiva: totalPcd } =
@@ -1425,10 +1428,12 @@ const SalvarVagas = {
     });
     const texto = this.montarTextoWhatsApp(municipioSel);
     const nomeArquivo = this.nomeArquivoPdf(municipioSel);
-    const linkMunicipio = this.montarLinkMunicipio(municipioSel, formato);
+    const linkMunicipio = this.montarLinkMunicipio(municipioFiltro, formato, unidade);
 
     return {
       municipio: municipioSel,
+      municipioFiltro: String(municipioFiltro || "").trim(),
+      unidade: String(unidade || "").trim(),
       formato,
       html,
       texto,
@@ -1519,7 +1524,7 @@ const SalvarVagas = {
   montarTextoLink(pacote) {
     const url =
       pacote.linkMunicipio ||
-      this.montarLinkMunicipio(pacote.municipio, pacote.formato);
+      this.montarLinkMunicipio(pacote.municipioFiltro, pacote.formato, pacote.unidade);
     return {
       url,
       texto: `Vagas de ${pacote.municipio} — ${this.dataHojeBR()}\n${url}`,
@@ -1615,13 +1620,16 @@ const SalvarVagas = {
     }
     botao.textContent = botao.dataset.labelOriginal || "Compartilhar";
     const municipio = document.getElementById("filtro-municipio")?.value || "";
-    botao.disabled = !String(municipio).trim();
+    const unidade = document.getElementById("filtro-unidade")?.value || "";
+    botao.disabled = !String(municipio).trim() && !String(unidade).trim();
   },
 
-  async compartilhar({ municipio, vagas, formato }) {
+  async compartilhar({ municipio, municipioFiltro, unidade, vagas, formato }) {
     const municipioSel = String(municipio || "").trim();
-    if (!municipioSel) {
-      alert("Selecione um município para compartilhar as vagas.");
+    const unidadeSel = String(unidade || "").trim();
+    const municipioFiltroSel = String(municipioFiltro || "").trim();
+    if (!municipioSel && !unidadeSel) {
+      alert("Selecione um município ou uma unidade para compartilhar as vagas.");
       return;
     }
 
@@ -1636,7 +1644,13 @@ const SalvarVagas = {
     this.definirEstadoBotao(true);
     this.limparResiduos();
     try {
-      const pacote = await this.prepararPacote({ municipio: municipioSel, vagas, formato });
+      const pacote = await this.prepararPacote({
+        municipio: municipioSel,
+        municipioFiltro: municipioFiltroSel,
+        unidade: unidadeSel,
+        vagas,
+        formato,
+      });
       this.abrirMenuCompartilhar(pacote);
     } catch (error) {
       console.error(error);
@@ -1657,6 +1671,8 @@ const SalvarVagas = {
       });
       this.abrirMenuCompartilhar({
         municipio: municipioSel,
+        municipioFiltro: municipioFiltroSel,
+        unidade: unidadeSel,
         formato,
         html,
         texto: this.montarTextoWhatsApp(municipioSel),
@@ -1665,7 +1681,7 @@ const SalvarVagas = {
         blob: null,
         file: null,
         nomeArquivo: this.nomeArquivoPdf(municipioSel),
-        linkMunicipio: this.montarLinkMunicipio(municipioSel, formato),
+        linkMunicipio: this.montarLinkMunicipio(municipioFiltroSel, formato, unidadeSel),
       });
     } finally {
       this.definirEstadoBotao(false);

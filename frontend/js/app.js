@@ -357,6 +357,17 @@ function aplicarFiltrosDaURL() {
     }
   }
 
+  const unidadeParam = String(params.get("unidade") || "").trim();
+  if (unidadeParam && els.unidade) {
+    const match = [...els.unidade.options].find(
+      (opt) => opt.value && normalizar(opt.value) === normalizar(unidadeParam)
+    );
+    if (match) {
+      els.unidade.value = match.value;
+      state.filtros.unidade = match.value;
+    }
+  }
+
   const view = String(params.get("view") || "").toLowerCase();
   if (view === "tabela" || view === "table") {
     state.viewMode = "table";
@@ -460,21 +471,28 @@ function render() {
   renderPaginacao();
 }
 
-function atualizarBotaoCompartilhar() {
-  if (!els.compartilhar) return;
-  const municipio = String(els.municipio.value || state.filtros.municipio || "").trim();
-  const habilitado = Boolean(municipio);
-  els.compartilhar.disabled = !habilitado;
-  els.compartilhar.title = habilitado
-    ? `Compartilhar as vagas de ${municipio}`
-    : "Selecione um município para compartilhar as vagas";
+function escopoCompartilhar() {
+  const municipio = String(els.municipio?.value || state.filtros.municipio || "").trim();
+  const unidade = String(els.unidade?.value || state.filtros.unidade || "").trim();
+  const rotulo = [unidade, municipio].filter(Boolean).join(" — ");
+  return { municipio, unidade, rotulo };
 }
 
-function vagasDoMunicipioParaCompartilhar(municipio) {
-  const alvo = normalizar(municipio);
+function atualizarBotaoCompartilhar() {
+  if (!els.compartilhar) return;
+  const { rotulo } = escopoCompartilhar();
+  const habilitado = Boolean(rotulo);
+  els.compartilhar.disabled = !habilitado;
+  els.compartilhar.title = habilitado
+    ? `Compartilhar as vagas de ${rotulo}`
+    : "Selecione um município ou uma unidade para compartilhar as vagas";
+}
+
+function vagasParaCompartilhar({ municipio, unidade }) {
   return state.vagas
     .filter((vaga) => {
-      if (normalizar(municipioDaVaga(vaga)) !== alvo) return false;
+      if (municipio && normalizar(municipioDaVaga(vaga)) !== normalizar(municipio)) return false;
+      if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
       if (!passaFiltroLista(vaga, state.filtros.escolaridade, "escolaridade")) return false;
       if (!passaFiltroLista(vaga, state.filtros.tipoContratacao, "tipo_contratacao")) return false;
       if (!passaFiltroLista(vaga, state.filtros.experiencia, "experiencia")) return false;
@@ -490,16 +508,18 @@ function vagasDoMunicipioParaCompartilhar(municipio) {
 }
 
 async function compartilharVagasMunicipio() {
-  const municipio = String(els.municipio.value || state.filtros.municipio || "").trim();
-  if (!municipio) {
-    alert("Selecione um município para compartilhar as vagas.");
-    els.municipio.focus();
+  const escopo = escopoCompartilhar();
+  if (!escopo.rotulo) {
+    alert("Selecione um município ou uma unidade para compartilhar as vagas.");
+    (els.unidade || els.municipio)?.focus();
     return;
   }
 
   await SalvarVagas.compartilhar({
-    municipio,
-    vagas: vagasDoMunicipioParaCompartilhar(municipio),
+    municipio: escopo.rotulo,
+    municipioFiltro: escopo.municipio,
+    unidade: escopo.unidade,
+    vagas: vagasParaCompartilhar(escopo),
     formato: state.viewMode,
   });
 }
