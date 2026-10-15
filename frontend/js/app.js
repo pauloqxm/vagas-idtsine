@@ -144,6 +144,19 @@ function municipioDaVaga(vaga) {
   return textoCampo(vaga, "municipio_trabalho");
 }
 
+function compararTexto(a, b) {
+  return String(a || "").localeCompare(String(b || ""), "pt-BR", { sensitivity: "base" });
+}
+
+function ordenarVagas(vagas, { porUnidade } = {}) {
+  return [...vagas].sort((a, b) => {
+    if (porUnidade) {
+      return compararTexto(municipioDaVaga(a), municipioDaVaga(b)) || compararTexto(a.ocupacao, b.ocupacao);
+    }
+    return compararTexto(a.ocupacao, b.ocupacao) || compararTexto(a.unidade, b.unidade);
+  });
+}
+
 function passaFiltroLista(vaga, filtro, campo) {
   if (!filtro) return true;
   return normalizar(textoCampo(vaga, campo)) === normalizar(filtro);
@@ -397,6 +410,9 @@ function aplicarFiltros(opcoes = {}) {
     if (!passaFiltroPcd(vaga)) return false;
     return true;
   });
+  if (unidade) {
+    state.filtradas = ordenarVagas(state.filtradas, { porUnidade: true });
+  }
 
   if (resetarPagina) {
     state.pagina = 1;
@@ -503,22 +519,17 @@ function atualizarBotaoCompartilhar() {
 }
 
 function vagasParaCompartilhar({ municipio, unidade }) {
-  return state.vagas
-    .filter((vaga) => {
-      if (municipio && normalizar(municipioDaVaga(vaga)) !== normalizar(municipio)) return false;
-      if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
-      if (!passaFiltroLista(vaga, state.filtros.escolaridade, "escolaridade")) return false;
-      if (!passaFiltroLista(vaga, state.filtros.tipoContratacao, "tipo_contratacao")) return false;
-      if (!passaFiltroLista(vaga, state.filtros.experiencia, "experiencia")) return false;
-      if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
-      if (!passaFiltroPcd(vaga)) return false;
-      return true;
-    })
-    .sort(
-      (a, b) =>
-        String(a.ocupacao || "").localeCompare(String(b.ocupacao || ""), "pt-BR") ||
-        String(a.unidade || "").localeCompare(String(b.unidade || ""), "pt-BR")
-    );
+  const lista = state.vagas.filter((vaga) => {
+    if (municipio && normalizar(municipioDaVaga(vaga)) !== normalizar(municipio)) return false;
+    if (unidade && normalizar(vaga.unidade) !== normalizar(unidade)) return false;
+    if (!passaFiltroLista(vaga, state.filtros.escolaridade, "escolaridade")) return false;
+    if (!passaFiltroLista(vaga, state.filtros.tipoContratacao, "tipo_contratacao")) return false;
+    if (!passaFiltroLista(vaga, state.filtros.experiencia, "experiencia")) return false;
+    if (!dataDentroPeriodo(dataFiltro(vaga), state.filtros.dataPeriodo)) return false;
+    if (!passaFiltroPcd(vaga)) return false;
+    return true;
+  });
+  return ordenarVagas(lista, { porUnidade: Boolean(unidade) });
 }
 
 async function compartilharVagasMunicipio() {
